@@ -1,7 +1,8 @@
 from sqlalchemy import Column, String, Integer, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 import uuid
+from .base import Base  # Import Base here!
 
 class Player(Base):
     __tablename__ = "players"
@@ -12,6 +13,3 @@ class Player(Base):
     username = Column(String(100), nullable=True)
 
     game_session = relationship("GameSession", back_populates="players")
-
-    def __repr__(self):
-        return f"Player(id={self.id}, game_session_id={self.game_session_id}, username={self.username}, position=({self.player_x}, {self.player_y}))"
