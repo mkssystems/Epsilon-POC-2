@@ -141,5 +141,5 @@ def create_labyrinth(request: LabyrinthCreateRequest, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail=str(e))
 
 app.include_router(router)
-frontend_path = os.path.join(os.path.dirname(__file__), "frontend")
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
