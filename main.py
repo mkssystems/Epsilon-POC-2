@@ -19,9 +19,6 @@ import os
 # FastAPI app initialization 
 app = FastAPI()
 
-# Serve frontend from 'frontend' directory
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
-
 # SQLAlchemy database setup
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
@@ -81,3 +78,6 @@ def create_game_session(request: GameSessionCreateRequest, db: Session = Depends
     db.refresh(game_session)
 
     return game_session
+
+# Serve frontend from 'frontend' directory
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
