@@ -1,6 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Boolean, DateTime
-from sqlalchemy.orm import relationship, Session
-from datetime import datetime
+from sqlalchemy.orm import Session
 from typing import Optional
 import random
 import uuid
