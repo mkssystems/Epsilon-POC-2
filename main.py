@@ -13,7 +13,7 @@ from models.base import Base
 
 import os
 
-# FastAPI app initialization
+# FastAPI app initialization 
 app = FastAPI()
 
 # Serve frontend from 'frontend' directory
