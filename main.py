@@ -2,15 +2,12 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, sessionmaker
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import create_engine
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from models.game_session import GameSession
-from models.labyrinth import Labyrinth
-from models.player import Player
 from models.base import Base
-
 import os
 
 # FastAPI app initialization 
@@ -40,7 +37,7 @@ def startup():
 # Pydantic model for creating game sessions
 class GameSessionCreateRequest(BaseModel):
     size: int
-    seed: str
+    seed: Optional[str] = None  # Seed can be optional
 
 # Pydantic model for responses
 class GameSessionResponse(BaseModel):
@@ -68,7 +65,7 @@ def create_game_session(request: GameSessionCreateRequest, db: Session = Depends
 
     # Create a new game session
     game_session = GameSession(
-        seed=request.seed,
+        seed=labyrinth.seed,
         labyrinth_id=labyrinth.id,
         start_x=labyrinth.start_x,
         start_y=labyrinth.start_y
