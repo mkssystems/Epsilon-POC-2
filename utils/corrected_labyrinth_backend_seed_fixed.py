@@ -9,7 +9,6 @@ DIRECTIONS = {"N": (0, -1), "S": (0, 1), "E": (1, 0), "W": (-1, 0)}
 OPPOSITE = {"N": "S", "S": "N", "E": "W", "W": "E"}
 
 def get_tile_type_from_directions(directions):
-    sorted_dirs = sorted(directions)
     if len(directions) == 1:
         return "dead_end"
     elif len(directions) == 2:
