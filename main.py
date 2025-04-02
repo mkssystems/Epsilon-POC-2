@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
-from sqlalchemy.orm import Session, sessionmaker, declarative_base
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session, sessionmaker
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime
@@ -8,19 +9,20 @@ from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from models.game_session import GameSession
 from models.labyrinth import Labyrinth
 from models.player import Player
-from models.base import Base  # Import shared Base
+from models.base import Base
 
 import os
 
 # FastAPI app initialization
 app = FastAPI()
 
+# Serve frontend from 'frontend' directory
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
 # SQLAlchemy database setup
-DATABASE_URL = os.getenv("DATABASE_URL")  # Use env var provided by Render
+DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
-
-Base = declarative_base()
 
 # Dependency to get the database session
 def get_db():
@@ -50,7 +52,7 @@ class GameSessionResponse(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Endpoint to list game sessions
 @app.get("/game-sessions", response_model=List[GameSessionResponse])
