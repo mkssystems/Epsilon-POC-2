@@ -8,6 +8,11 @@ from models.labyrinth import Labyrinth  # Import the Labyrinth model
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+@app.on_event("startup")
+def startup():
+    # Initialize database tables
+    Base.metadata.create_all(bind=engine)
+
 # FastAPI app initialization
 app = FastAPI()
 
