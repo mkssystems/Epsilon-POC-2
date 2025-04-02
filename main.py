@@ -7,6 +7,12 @@ from models.player import Player
 from models.labyrinth import Labyrinth  # Import the Labyrinth model
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from typing import List
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from models.game_session import GameSession  # ensure correct import
+from pydantic import BaseModel
+from datetime import datetime
 
 @app.on_event("startup")
 def startup():
@@ -33,6 +39,22 @@ def get_db():
         yield db
     finally:
         db.close()
+
+class GameSessionResponse(BaseModel):
+    id: str
+    seed: str
+    labyrinth_id: str
+    start_x: int
+    start_y: int
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+@app.get("/game-sessions", response_model=List[GameSessionResponse])
+def list_game_sessions(db: Session = Depends(get_db)):
+    sessions = db.query(GameSession).all()
+    return sessions
 
 @app.post("/create-game-session")
 def create_game_session(request: GameSessionCreateRequest, db: Session = Depends(get_db)):
