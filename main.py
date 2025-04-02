@@ -6,8 +6,14 @@ from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import create_engine
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
-from models.game_session import GameSession
+
+# Explicitly import all model classes
 from models.base import Base
+from models.game_session import GameSession
+from models.labyrinth import Labyrinth
+from models.player import Player
+from models.tile import Tile
+
 import os
 
 # FastAPI app initialization 
