@@ -1,7 +1,9 @@
 from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
+from .base import Base  # Import Base here!
 
 class Labyrinth(Base):
     __tablename__ = "labyrinths"
@@ -13,6 +15,3 @@ class Labyrinth(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     game_sessions = relationship("GameSession", back_populates="labyrinth")
-
-    def __repr__(self):
-        return f"Labyrinth(id={self.id}, size={self.size}, seed={self.seed}, start=({self.start_x}, {self.start_y}))"
