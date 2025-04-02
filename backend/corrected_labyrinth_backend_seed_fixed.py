@@ -13,7 +13,7 @@ import os
 app = FastAPI()
 router = APIRouter()
 
-DATABASE_URL = "mysql+pymysql://epsilon_user:secret123@localhost/epsilon"
+DATABASE_URL = "postgresql://epsilon_51hw_user:odXXC7QP1IpBhOQTAjdBs5uksmiufu6H@dpg-cvmm76vfte5s738rpks0-a/epsilon_51hw"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
