@@ -30,9 +30,6 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
     random.seed(seed)
 
     labyrinth = Labyrinth(size=size, seed=seed)
-    db.add(labyrinth)
-    db.commit()
-    db.refresh(labyrinth)
 
     visited = [[False] * size for _ in range(size)]
     tile_map = {}
@@ -57,6 +54,11 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
     dfs(start_x, start_y)
 
     labyrinth.start_x, labyrinth.start_y = start_x, start_y
+
+    # Commit labyrinth after setting start coordinates
+    db.add(labyrinth)
+    db.commit()
+    db.refresh(labyrinth)
 
     for (x, y), tile_data in tile_map.items():
         directions = tile_data['open_directions']
