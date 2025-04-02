@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from .base import Base
@@ -13,5 +13,6 @@ class Tile(Base):
     y = Column(Integer, nullable=False)
     type = Column(String(50), nullable=False)
     open_directions = Column(String(10), nullable=False)
+    revealed = Column(Boolean, nullable=False, default=False)  # Added revealed column
 
     labyrinth = relationship("Labyrinth", back_populates="tiles")
