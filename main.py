@@ -6,6 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import create_engine
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
+from uuid import UUID
 
 # Explicitly import all model classes
 from models.base import Base
@@ -44,9 +45,9 @@ class GameSessionCreateRequest(BaseModel):
 
 # Pydantic model for responses
 class GameSessionResponse(BaseModel):
-    id: str
+    id: UUID
     seed: str
-    labyrinth_id: str
+    labyrinth_id: UUID
     start_x: int
     start_y: int
     created_at: datetime
