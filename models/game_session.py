@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
-from .base import Base  # Import Base here!
+from .base import Base
 
 class GameSession(Base):
     __tablename__ = "game_sessions"
