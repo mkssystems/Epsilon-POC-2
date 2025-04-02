@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Epsilon-POC Map Generator</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f7f7f7; }
+    .tile-img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      background-color: #eee;
+      border: 1px solid #aaa;
+    }
+    .row { display: flex; }
+    #map { margin-top: 20px; }
+    .controls, .actions { 
+      margin-bottom: 15px; 
+      padding: 10px;
+      background-color: #ffffff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    input, button {
+      margin: 5px;
+      padding: 6px;
+      border-radius: 3px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>Epsilon-POC Map Generator</h1>
+
+  <div class="controls">
+    <label>Map Size (4-10):</label>
+    <input type="number" id="size" min="4" max="10" value="7">
+
+    <label>Seed (optional):</label>
+    <input type="text" id="seed">
+  </div>
+
+  <div class="actions">
+    <button onclick="generateLabyrinth(false)">Generate Random</button>
+    <button onclick="generateLabyrinth(true)">Generate from Seed</button>
+  </div>
+
+  <div id="display-seed"></div>
+  <div id="map"></div>
+
+  <script>
+    function getImageName(type, directions) {
+      const sorted = Array.isArray(directions) ? directions.slice().sort() : [];
+
+      if (type === "crossroad") return "tile_crossroad.png";
+      if (type === "corridor") {
+        return sorted.includes("N") && sorted.includes("S") ? "tile_corridor_NS.png" : "tile_corridor_EW.png";
+      }
+      if (type === "turn") {
+        const turnKey = ["NE", "NW", "SE", "SW"].find(
+          key => key.split("").every(d => sorted.includes(d))
+        );
+        return "tile_turn_" + turnKey + ".png";
+      }
+      if (type === "t_section") {
+        const missing = ["N", "E", "S", "W"].find(d => !sorted.includes(d));
+        return "tile_t_section_" + missing + ".png";
+      }
+      if (type === "dead_end") {
+        return "tile_dead_end_" + sorted[0] + ".png";
+      }
+      return "tile_crossroad.png";
+    }
+
+    async function generateLabyrinth(useSeed) {
+      const size = parseInt(document.getElementById("size").value);
+      const seedValue = document.getElementById("seed").value;
+
+      const bodyData = { size };
+      if (useSeed && seedValue) bodyData.seed = seedValue;
+
+      const response = await fetch("/generate-labyrinth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyData)
+      });
+
+      if (!response.ok) {
+        alert("Failed to generate labyrinth!");
+        return;
+      }
+
+      const data = await response.json();
+      document.getElementById("display-seed").innerText = "Seed used: " + (data.seed || "(random)");
+
+      const map = document.getElementById("map");
+      map.innerHTML = "";
+      const grid = Array.from({ length: size }, () => Array(size).fill(null));
+
+      data.tiles.forEach(tile => {
+        grid[tile.y][tile.x] = tile;
+      });
+
+      grid.forEach(row => {
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "row";
+
+        row.forEach(tile => {
+          const div = document.createElement("div");
+          if (tile) {
+            const img = document.createElement("img");
+            img.src = "tiles/" + getImageName(tile.type, tile.open_directions);
+            img.alt = tile.type;
+            img.className = "tile-img";
+            div.appendChild(img);
+          }
+          rowDiv.appendChild(div);
+        });
+
+        map.appendChild(rowDiv);
+      });
+    }
+  </script>
+</body>
+</html>
