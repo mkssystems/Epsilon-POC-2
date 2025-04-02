@@ -8,6 +8,8 @@ from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from models.game_session import GameSession
 from models.labyrinth import Labyrinth
 from models.player import Player
+from models.base import Base  # Import shared Base
+
 import os
 
 # FastAPI app initialization
