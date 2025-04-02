@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from .base import Base
 import uuid
 
@@ -7,8 +8,10 @@ class Tile(Base):
     __tablename__ = "tiles"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    labyrinth_id = Column(UUID(as_uuid=True), ForeignKey("labyrinths.id"))
-    x = Column(Integer)
-    y = Column(Integer)
-    type = Column(String(50))
-    open_directions = Column(String(10))
+    labyrinth_id = Column(UUID(as_uuid=True), ForeignKey("labyrinths.id"), nullable=False)
+    x = Column(Integer, nullable=False)
+    y = Column(Integer, nullable=False)
+    type = Column(String(50), nullable=False)
+    open_directions = Column(String(10), nullable=False)
+
+    labyrinth = relationship("Labyrinth", back_populates="tiles")
