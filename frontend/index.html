@@ -120,10 +120,9 @@
       const size = parseInt(document.getElementById("size").value);
       const seedValue = document.getElementById("seed").value;
 
-      const bodyData = { size };
-      if (useSeed && seedValue) bodyData.seed = seedValue;
+      const bodyData = { size, seed: useSeed && seedValue ? seedValue : "" };
 
-      const response = await fetch("/generate-labyrinth", {
+      const response = await fetch("/create-game-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bodyData)
@@ -137,32 +136,7 @@
       const data = await response.json();
       document.getElementById("display-seed").innerText = "Seed used: " + (data.seed || "(random)");
 
-      const map = document.getElementById("map");
-      map.innerHTML = "";
-      const grid = Array.from({ length: size }, () => Array(size).fill(null));
-
-      data.tiles.forEach(tile => {
-        grid[tile.y][tile.x] = tile;
-      });
-
-      grid.forEach(row => {
-        const rowDiv = document.createElement("div");
-        rowDiv.className = "row";
-
-        row.forEach(tile => {
-          const div = document.createElement("div");
-          if (tile) {
-            const img = document.createElement("img");
-            img.src = "tiles/" + getImageName(tile.type, tile.open_directions);
-            img.alt = tile.type;
-            img.className = "tile-img";
-            div.appendChild(img);
-          }
-          rowDiv.appendChild(div);
-        });
-
-        map.appendChild(rowDiv);
-      });
+      fetchGameSessions(); // Refresh sessions
     }
 
     async function fetchGameSessions() {
@@ -188,7 +162,6 @@
       });
     }
 
-    // Load sessions initially
     window.onload = fetchGameSessions;
   </script>
 </body>
