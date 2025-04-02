@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Epsilon-POC Map Generator</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background-color: #f7f7f7; }
@@ -15,7 +15,7 @@
     }
     .row { display: flex; }
     #map { margin-top: 20px; }
-    .controls, .actions { 
+    .controls, .actions, .sessions { 
       margin-bottom: 15px; 
       padding: 10px;
       background-color: #ffffff;
@@ -38,6 +38,20 @@
     button:hover {
       background-color: #45a049;
     }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -58,6 +72,25 @@
 
   <div id="display-seed"></div>
   <div id="map"></div>
+
+  <div class="sessions">
+    <h2>Game Sessions</h2>
+    <button onclick="fetchGameSessions()">Refresh Sessions List</button>
+    <table id="sessions-table">
+      <thead>
+        <tr>
+          <th>Session ID</th>
+          <th>Seed</th>
+          <th>Labyrinth ID</th>
+          <th>Start Position (X, Y)</th>
+          <th>Created At</th>
+        </tr>
+      </thead>
+      <tbody id="sessions-body">
+        <!-- Game sessions will populate here -->
+      </tbody>
+    </table>
+  </div>
 
   <script>
     function getImageName(type, directions) {
@@ -131,6 +164,32 @@
         map.appendChild(rowDiv);
       });
     }
+
+    async function fetchGameSessions() {
+      const response = await fetch("/game-sessions");
+      if (!response.ok) {
+        alert('Error fetching game sessions!');
+        return;
+      }
+      const sessions = await response.json();
+      const tbody = document.getElementById('sessions-body');
+      tbody.innerHTML = '';
+
+      sessions.forEach(session => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${session.id}</td>
+          <td>${session.seed}</td>
+          <td>${session.labyrinth_id}</td>
+          <td>(${session.start_x}, ${session.start_y})</td>
+          <td>${new Date(session.created_at).toLocaleString()}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Load sessions initially
+    window.onload = fetchGameSessions;
   </script>
 </body>
 </html>
