@@ -63,12 +63,32 @@ class LabyrinthTile(BaseModel):
     y: int
     type: str
     open_directions: List[str]
+    image: str
 
 class LabyrinthResponse(BaseModel):
     seed: str
     start_x: int
     start_y: int
     tiles: List[LabyrinthTile]
+
+# Helper function to determine tile image names
+def get_image_name(tile_type, directions):
+    directions = sorted(directions)
+    if tile_type == "crossroad":
+        return "tile_crossroad.png"
+    elif tile_type == "corridor":
+        return "tile_corridor_NS.png" if "N" in directions else "tile_corridor_EW.png"
+    elif tile_type == "turn":
+        if "N" in directions and "E" in directions: return "tile_turn_NE.png"
+        if "N" in directions and "W" in directions: return "tile_turn_NW.png"
+        if "S" in directions and "E" in directions: return "tile_turn_SE.png"
+        if "S" in directions and "W" in directions: return "tile_turn_SW.png"
+    elif tile_type == "t_section":
+        missing = {"N", "E", "S", "W"} - set(directions)
+        return f"tile_t_section_{missing.pop()}.png"
+    elif tile_type == "dead_end":
+        return f"tile_dead_end_{directions[0]}.png"
+    return "tile_crossroad.png"
 
 # Endpoint to list game sessions
 @app.get("/game-sessions", response_model=List[GameSessionResponse])
@@ -102,7 +122,8 @@ def generate_labyrinth_visual(request: GenerateLabyrinthRequest, db: Session = D
             x=tile.x,
             y=tile.y,
             type=tile.type,
-            open_directions=list(tile.open_directions)
+            open_directions=list(tile.open_directions),
+            image=get_image_name(tile.type, tile.open_directions)
         )
         for tile in db.query(Tile).filter(Tile.labyrinth_id == labyrinth.id).all()
     ]
