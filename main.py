@@ -123,3 +123,6 @@ def destroy_all_sessions(db: Session = Depends(get_db)):
 
 # Serve frontend from 'frontend' directory
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
+# Serve tiles explicitly
+app.mount("/tiles", StaticFiles(directory="frontend/tiles"), name="tiles")
