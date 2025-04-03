@@ -17,7 +17,7 @@ from models.tile import Tile
 
 import os
 
-# FastAPI app initialization 
+# FastAPI app initialization
 app = FastAPI()
 
 # SQLAlchemy database setup
@@ -38,12 +38,11 @@ def get_db():
 def startup():
     Base.metadata.create_all(bind=engine)
 
-# Pydantic model for creating game sessions
+# Pydantic models
 class GameSessionCreateRequest(BaseModel):
     size: int
-    seed: Optional[str] = None  # Seed can be optional
+    seed: Optional[str] = None
 
-# Pydantic model for responses
 class GameSessionResponse(BaseModel):
     id: UUID
     seed: str
@@ -55,19 +54,32 @@ class GameSessionResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class GenerateLabyrinthRequest(BaseModel):
+    size: int
+    seed: Optional[str] = None
+
+class LabyrinthTile(BaseModel):
+    x: int
+    y: int
+    type: str
+    open_directions: List[str]
+
+class LabyrinthResponse(BaseModel):
+    seed: str
+    start_x: int
+    start_y: int
+    tiles: List[LabyrinthTile]
+
 # Endpoint to list game sessions
 @app.get("/game-sessions", response_model=List[GameSessionResponse])
 def list_game_sessions(db: Session = Depends(get_db)):
-    sessions = db.query(GameSession).all()
-    return sessions
+    return db.query(GameSession).all()
 
 # Endpoint to create a new game session
 @app.post("/create-game-session", response_model=GameSessionResponse)
 def create_game_session(request: GameSessionCreateRequest, db: Session = Depends(get_db)):
-    # Generate the labyrinth
     labyrinth = generate_labyrinth(size=request.size, seed=request.seed, db=db)
 
-    # Create a new game session
     game_session = GameSession(
         seed=labyrinth.seed,
         labyrinth_id=labyrinth.id,
@@ -79,6 +91,35 @@ def create_game_session(request: GameSessionCreateRequest, db: Session = Depends
     db.refresh(game_session)
 
     return game_session
+
+# Endpoint to generate labyrinth without session creation
+@app.post("/generate-labyrinth", response_model=LabyrinthResponse)
+def generate_labyrinth_visual(request: GenerateLabyrinthRequest, db: Session = Depends(get_db)):
+    labyrinth = generate_labyrinth(size=request.size, seed=request.seed, db=db)
+
+    tiles_data = [
+        LabyrinthTile(
+            x=tile.x,
+            y=tile.y,
+            type=tile.type,
+            open_directions=list(tile.open_directions)
+        )
+        for tile in db.query(Tile).filter(Tile.labyrinth_id == labyrinth.id).all()
+    ]
+
+    return LabyrinthResponse(
+        seed=labyrinth.seed,
+        start_x=labyrinth.start_x,
+        start_y=labyrinth.start_y,
+        tiles=tiles_data
+    )
+
+# Endpoint to destroy all game sessions
+@app.delete("/destroy-all-sessions")
+def destroy_all_sessions(db: Session = Depends(get_db)):
+    db.query(GameSession).delete()
+    db.commit()
+    return {"detail": "All game sessions deleted"}
 
 # Serve frontend from 'frontend' directory
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
