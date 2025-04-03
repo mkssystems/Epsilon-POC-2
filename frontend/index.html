@@ -87,7 +87,6 @@
         </tr>
       </thead>
       <tbody id="sessions-body">
-        <!-- Game sessions will populate here -->
       </tbody>
     </table>
   </div>
@@ -136,15 +135,32 @@
       const data = await response.json();
       document.getElementById("display-seed").innerText = "Seed used: " + (data.seed || "(random)");
 
-      fetchGameSessions(); // Refresh sessions
+      const mapDiv = document.getElementById("map");
+      mapDiv.innerHTML = "";
+
+      const sizeMap = {};
+      data.tiles.forEach(tile => {
+        sizeMap[`${tile.x},${tile.y}`] = tile;
+      });
+
+      for (let y = 0; y < size; y++) {
+        const row = document.createElement("div");
+        row.className = "row";
+        for (let x = 0; x < size; x++) {
+          const tile = sizeMap[`${x},${y}`];
+          const img = document.createElement("img");
+          img.src = `images/${getImageName(tile.type, tile.open_directions)}`;
+          img.className = "tile-img";
+          row.appendChild(img);
+        }
+        mapDiv.appendChild(row);
+      }
+
+      fetchGameSessions();
     }
 
     async function fetchGameSessions() {
       const response = await fetch("/game-sessions");
-      if (!response.ok) {
-        alert('Error fetching game sessions!');
-        return;
-      }
       const sessions = await response.json();
       const tbody = document.getElementById('sessions-body');
       tbody.innerHTML = '';
