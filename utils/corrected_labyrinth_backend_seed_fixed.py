@@ -4,6 +4,7 @@ import random
 import uuid
 from models.labyrinth import Labyrinth
 from models.tile import Tile
+import json
 
 DIRECTIONS = {"N": (0, -1), "S": (0, 1), "E": (1, 0), "W": (-1, 0)}
 OPPOSITE = {"N": "S", "S": "N", "E": "W", "W": "E"}
@@ -30,6 +31,9 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
     random.seed(seed)
 
     labyrinth = Labyrinth(size=size, seed=seed)
+    db.add(labyrinth)
+    db.commit()
+    db.refresh(labyrinth)
 
     visited = [[False] * size for _ in range(size)]
     tile_map = {}
@@ -55,21 +59,15 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
 
     labyrinth.start_x, labyrinth.start_y = start_x, start_y
 
-    # Commit labyrinth after setting start coordinates
-    db.add(labyrinth)
-    db.commit()
-    db.refresh(labyrinth)
-
     for (x, y), tile_data in tile_map.items():
-        directions = tile_data['open_directions']
+        directions = sorted(tile_data['open_directions'])
         tile_type = get_tile_type_from_directions(directions)
         tile = Tile(
             labyrinth_id=labyrinth.id,
             x=x,
             y=y,
             type=tile_type,
-            open_directions=directions,
-            revealed=False
+            open_directions=json.dumps(directions)  # Explicitly store directions as JSON string
         )
         db.add(tile)
 
