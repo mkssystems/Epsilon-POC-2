@@ -82,7 +82,7 @@
           const tile = tiles.find(t => t.x === x && t.y === y);
           const img = document.createElement("img");
           img.className = "tile-img";
-          img.src = `/assets/${tile.image}`;
+          img.src = `/tiles/${tile.image}`;
           row.appendChild(img);
         }
         map.appendChild(row);
