@@ -1,6 +1,6 @@
 import pandas as pd
 from sqlalchemy.orm import Session
-from models import Entity, Equipment, Skill, Special
+from db.models import Entity, Equipment, Skill, Special  # Corrected import path
 
 def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
     """
