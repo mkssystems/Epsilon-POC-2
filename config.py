@@ -1,9 +1,9 @@
-# config.py
+from dotenv import load_dotenv
+import os
 
-# Direct connection string for Render.com PostgreSQL instance
-DATABASE_URL = "postgresql://epsilon_51hw_user:odXXC7QP1IpBhOQTAjdBs5uksmiufu6H@dpg-cvmm76vfte5s738rpks0-a/epsilon_51hw"
+load_dotenv()  # Loads from .env in root directory
 
-# Asset folder paths used throughout the game backend
+DATABASE_URL = os.getenv("DATABASE_URL")
 ASSET_PATHS = {
     "portraits": "assets/portraits/",
     "backstories": "assets/backstories/",
