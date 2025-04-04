@@ -18,6 +18,8 @@ from models.game_entities import Base as EntityBase, init_db
 from db.init_data import load_data
 
 from models.models import Entity, Equipment, Skill, Special
+from models.models import Base
+
 
 from config import DATABASE_URL
 import pandas as pd
