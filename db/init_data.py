@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
-from models import Entity, Equipment, Skill, Special  # Updated import path
+from models.models import Entity, Equipment, Skill, Special
 
 def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
     with Session(engine) as session:
