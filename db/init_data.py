@@ -2,12 +2,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from models.models import Entity, Equipment, Skill, Special
 
-def load_data(engine):
-    df_entities = pd.read_csv('assets/seed/entities.csv')
-    df_equipment = pd.read_csv('assets/seed/equipment.csv')
-    df_skills = pd.read_csv('assets/seed/skills.csv')
-    df_specials = pd.read_csv('assets/seed/specials.csv')
-
+def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
     with Session(engine) as session:
         # Load Entities
         for _, row in df_entities.iterrows():
