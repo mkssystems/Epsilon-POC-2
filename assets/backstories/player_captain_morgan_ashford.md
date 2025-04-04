@@ -1,0 +1,5 @@
+Born in the industrial wastelands of post-war Manchester, Morgan Ashford grew up surrounded by the clang of steel and the smell of machine oil. Her mother, a resilient engineer who ran an illegal scrap-for-parts business, taught her daughter that survival meant being smarter, faster, and calmer than anyone else. Morgan spent her teenage years learning how to weld, shoot, and hustle information on the streets. When her mother was arrested during a security sweep, Morgan vanished into the underworld.
+
+She resurfaced five years later as a licensed bounty hunter, famous for bringing in targets alive and leaving a trail of broken systems in her wake. Her legend spread after she outwitted a corporate kill team using only misdirection, a smoke grenade, and the faulty AI of a cleaning drone. Despite her skills, Morgan never stayed in one place or with one crew for long. She trusts few, and loves even fewer — but once you’ve earned her loyalty, it’s unshakable.
+
+Now, commanding the Epsilon 267 on a deep space assignment, Morgan is finally doing more than chasing ghosts — she's trying to build something real. Something worth protecting.

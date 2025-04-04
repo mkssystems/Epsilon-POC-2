@@ -1,0 +1,5 @@
+Blake Ryder’s first hack was a juvenile prank: rerouting power from his school’s lighting grid to spell 'HI' in Morse code across the ceiling. By the time he was seventeen, he’d already ghosted through military firewalls, corporate blackboxes, and government archives — just to prove he could. He grew up in a fringe Mars colony where rules were optional and trust was a luxury. But Blake learned to survive with his mind, his speed, and a devil-may-care grin.
+
+When he got caught breaching Essilun’s security core, he expected prison or worse. Instead, they offered him a job. He became a ghost in their machine, running deniable ops and sabotage missions — until he saw something he wasn’t meant to. He exposed a dark project involving weaponized AI consciousness, and barely escaped with his life.
+
+Now, working again under their banner (with new restrictions, fewer freedoms, and a kill-switch implant he pretends not to know about), Blake isn’t sure if he’s out for redemption, revenge, or just to survive. But one thing is certain: he won’t be silenced again.
