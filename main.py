@@ -14,10 +14,11 @@ from models.game_session import GameSession
 from models.labyrinth import Labyrinth
 from models.player import Player
 from models.tile import Tile
-from models.game_entities import init_db  # new import
+from models.game_entities import Base as EntityBase, init_db
+from db.init_data import load_data
 
-from config import DATABASE_URL  # uses static connection string
-
+from config import DATABASE_URL
+import pandas as pd
 import os
 
 # FastAPI app initialization
@@ -26,6 +27,9 @@ app = FastAPI()
 # SQLAlchemy database setup
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
+
+# Toggle for development-time DB reinit
+FORCE_REINIT_DB = True  # Set to False in production
 
 # Dependency to get the database session
 def get_db():
@@ -38,7 +42,20 @@ def get_db():
 # Initialize database tables on app startup
 @app.on_event("startup")
 def startup():
-    Base.metadata.create_all(bind=engine)
+    EntityBase.metadata.create_all(bind=engine)
+
+    if FORCE_REINIT_DB:
+        print("⚠️ Reinitializing the database from scratch...")
+        EntityBase.metadata.drop_all(bind=engine)
+        EntityBase.metadata.create_all(bind=engine)
+
+        # Load entity data from CSVs inside assets/seed
+        df_entities = pd.read_csv("assets/seed/entities.csv")
+        df_equipment = pd.read_csv("assets/seed/equipment.csv")
+        df_skills = pd.read_csv("assets/seed/skills.csv")
+        df_specials = pd.read_csv("assets/seed/specials.csv")
+
+        load_data(engine, df_entities, df_equipment, df_skills, df_specials)
 
 # Pydantic models
 class GameSessionCreateRequest(BaseModel):
