@@ -1,0 +1,11 @@
+id,entity_id,name,description
+b11d8e5e-4e6a-4a35-b1ee-4f864bd2c137,ffd58564-51ab-4574-970d-fd926def7780,Plasma energy shield,Absorbs up to 7–10 damage
+2b034470-c915-41b3-8d0f-8078f2e56bd4,8944afb7-6c61-4f95-86e0-3b57b2be79c8,Heal,Heals 2–4 health points
+88d4082f-7bb7-4292-8885-5dfa53220f92,ae79a829-06ea-4ef0-aae7-6816cca190d0,Overload,Stuns robotic enemies for 2 turns
+8e3a71d2-1d13-44a3-be52-3de334f692ea,6a23bb4e-e74c-4d2e-bcdc-63d0965b8054,Stun,Stuns player for 2 turns
+e29f02ac-aa78-4de9-af50-2c089941ff5e,9511d8a9-6d45-4fd0-b75b-e949c36fed78,None,—
+47c3d0e7-64f3-4a87-9bcf-2464701cae71,2a24498c-cf18-4fce-87d5-f4b61d4b8a76,—,—
+f4d08805-4d25-4d81-b8a2-4e7a4395149e,fe1c677c-94cb-41ff-a407-0f5d61551347,Survivor insight,Reveals path hints if healed
+b56cc1eb-7253-45da-a045-cd35c8f860a8,c6dc76d6-686e-4813-a262-1938a08c4f17,Pulse katana,"High initiative melee strike, bypasses light armor"
+482500be-0d88-4432-85ac-d6271ba87836,8aeb6286-628a-4507-9f2e-bd898879ef1c,Omni-spanner hacking gauntlet,"Bypasses terminal locks, disables traps"
+b783358f-3296-4672-af37-7bf32fcc59cb,05db5515-a648-4f50-a34f-5e3a303b24c1,AI drone 'Shakti',"Analyzes systems, hacks terminals, provides cover scans"
