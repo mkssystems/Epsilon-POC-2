@@ -1,31 +1,59 @@
 import pandas as pd
 from sqlalchemy.orm import Session
-from db.models import Entity, Equipment, Skill, Special  # Corrected import path
+from sqlalchemy import create_engine
+from models import Entity, Equipment, Skill, Special  # Updated import path
 
 def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
-    """
-    Load data into the database ensuring correct order of insertions 
-    to maintain foreign key constraints.
-    """
-
     with Session(engine) as session:
-        # Insert Entities first
-        session.bulk_insert_mappings(Entity, df_entities.to_dict(orient="records"))
+        # Load entities
+        for _, row in df_entities.iterrows():
+            entity = Entity(
+                id=row['id'],
+                name=row['name'],
+                description=row['description']
+            )
+            session.add(entity)
+
+        # Load equipment
+        for _, row in df_equipment.iterrows():
+            equipment = Equipment(
+                id=row['id'],
+                entity_id=row['entity_id'],
+                name=row['name'],
+                description=row['description']
+            )
+            session.add(equipment)
+
+        # Load skills
+        for _, row in df_skills.iterrows():
+            skill = Skill(
+                id=row['id'],
+                entity_id=row['entity_id'],
+                name=row['name'],
+                description=row['description']
+            )
+            session.add(skill)
+
+        # Load specials
+        for _, row in df_specials.iterrows():
+            special = Special(
+                id=row['id'],
+                entity_id=row['entity_id'],
+                name=row['name'],
+                description=row['description']
+            )
+            session.add(special)
+
         session.commit()
 
-        valid_entity_ids = set(df_entities["id"])
+# Example usage
+if __name__ == "__main__":
+    engine = create_engine('your_database_connection_string')
 
-        # Ensure Equipment references valid Entities
-        df_equipment = df_equipment[df_equipment["entity_id"].isin(valid_entity_ids)]
-        session.bulk_insert_mappings(Equipment, df_equipment.to_dict(orient="records"))
-        session.commit()
+    # Load data from CSV files
+    df_entities = pd.read_csv('path_to_entities.csv')
+    df_equipment = pd.read_csv('path_to_equipment.csv')
+    df_skills = pd.read_csv('path_to_skills.csv')
+    df_specials = pd.read_csv('path_to_specials.csv')
 
-        # Ensure Skills reference valid Entities
-        df_skills = df_skills[df_skills["entity_id"].isin(valid_entity_ids)]
-        session.bulk_insert_mappings(Skill, df_skills.to_dict(orient="records"))
-        session.commit()
-
-        # Ensure Specials reference valid Entities
-        df_specials = df_specials[df_specials["entity_id"].isin(valid_entity_ids)]
-        session.bulk_insert_mappings(Special, df_specials.to_dict(orient="records"))
-        session.commit()
+    load_data(engine, df_entities, df_equipment, df_skills, df_specials)
