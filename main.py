@@ -14,6 +14,9 @@ from models.game_session import GameSession
 from models.labyrinth import Labyrinth
 from models.player import Player
 from models.tile import Tile
+from models.game_entities import init_db  # new import
+
+from config import DATABASE_URL  # uses static connection string
 
 import os
 
@@ -21,7 +24,6 @@ import os
 app = FastAPI()
 
 # SQLAlchemy database setup
-DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
