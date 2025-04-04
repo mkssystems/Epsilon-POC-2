@@ -1,59 +1,44 @@
 import pandas as pd
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
 from models.models import Entity, Equipment, Skill, Special
 
-def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
+def load_data(engine):
+    df_entities = pd.read_csv('assets/seed/entities.csv')
+    df_equipment = pd.read_csv('assets/seed/equipment.csv')
+    df_skills = pd.read_csv('assets/seed/skills.csv')
+    df_specials = pd.read_csv('assets/seed/specials.csv')
+
     with Session(engine) as session:
-        # Load entities
+        # Load Entities
         for _, row in df_entities.iterrows():
             entity = Entity(
-                id=row['id'],
                 name=row['name'],
-                description=row['description']
+                description=row.get('description', 'No description provided')
             )
             session.add(entity)
 
-        # Load equipment
+        # Load Equipment
         for _, row in df_equipment.iterrows():
             equipment = Equipment(
-                id=row['id'],
-                entity_id=row['entity_id'],
                 name=row['name'],
-                description=row['description']
+                description=row.get('description', 'No description provided')
             )
             session.add(equipment)
 
-        # Load skills
+        # Load Skills
         for _, row in df_skills.iterrows():
             skill = Skill(
-                id=row['id'],
-                entity_id=row['entity_id'],
                 name=row['name'],
-                description=row['description']
+                description=row.get('description', 'No description provided')
             )
             session.add(skill)
 
-        # Load specials
+        # Load Specials
         for _, row in df_specials.iterrows():
             special = Special(
-                id=row['id'],
-                entity_id=row['entity_id'],
                 name=row['name'],
-                description=row['description']
+                description=row.get('description', 'No description provided')
             )
             session.add(special)
 
         session.commit()
-
-# Example usage
-if __name__ == "__main__":
-    engine = create_engine('your_database_connection_string')
-
-    # Load data from CSV files
-    df_entities = pd.read_csv('path_to_entities.csv')
-    df_equipment = pd.read_csv('path_to_equipment.csv')
-    df_skills = pd.read_csv('path_to_skills.csv')
-    df_specials = pd.read_csv('path_to_specials.csv')
-
-    load_data(engine, df_entities, df_equipment, df_skills, df_specials)
