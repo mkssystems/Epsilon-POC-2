@@ -23,12 +23,20 @@ def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
                 backstory_path=row['backstory_path']
             )
             session.add(entity)
-
+        
         # Commit the entities to ensure they are in the database
         session.commit()
 
+        # Log entity IDs to debug
+        print("Entities inserted:")
+        for index, row in df_entities.iterrows():
+            print(f"Inserted Entity ID: {row['id']}")
+
         # Now load equipment into the 'equipment' table
         for index, row in df_equipment.iterrows():
+            # Log the entity_id before inserting equipment to debug
+            print(f"Inserting Equipment with entity_id: {row['entity_id']}")
+            
             # Make sure entity_id in equipment matches the id of an entity already inserted
             equipment = Equipment(
                 id=row['id'],
