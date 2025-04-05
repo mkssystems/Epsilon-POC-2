@@ -22,10 +22,8 @@ from models.equipment import Equipment
 from models.skills import Skill
 from models.specials import Special
 
-
 from config import DATABASE_URL, init_db  # Import init_db from config
 import pandas as pd
-import os
 
 # FastAPI app initialization
 app = FastAPI()
@@ -48,15 +46,13 @@ def get_db():
 # Initialize database tables on app startup
 @app.on_event("startup")
 def startup():
-    # Initialize database using the init_db function
-    init_db()  # Calling the init_db function to create tables
+    init_db()
 
     if FORCE_REINIT_DB:
         print("⚠️ Reinitializing the database from scratch...")
-        EntityBase.metadata.drop_all(bind=engine)  # Drop existing tables
-        EntityBase.metadata.create_all(bind=engine)  # Create tables from models
+        EntityBase.metadata.drop_all(bind=engine)
+        EntityBase.metadata.create_all(bind=engine)
 
-        # Load entity data from CSVs inside assets/seed
         df_entities = pd.read_csv("assets/seed/entities.csv")
         df_equipment = pd.read_csv("assets/seed/equipment.csv")
         df_skills = pd.read_csv("assets/seed/skills.csv")
@@ -97,24 +93,14 @@ class LabyrinthResponse(BaseModel):
     start_y: int
     tiles: List[LabyrinthTile]
 
-# Helper function to determine tile image names
-def get_image_name(tile_type, directions):
-    directions = sorted(directions)
-    if tile_type == "crossroad":
-        return "tile_crossroad.png"
-    elif tile_type == "corridor":
-        return "tile_corridor_NS.png" if "N" in directions else "tile_corridor_EW.png"
-    elif tile_type == "turn":
-        if "N" in directions and "E" in directions: return "tile_turn_NE.png"
-        if "N" in directions and "W" in directions: return "tile_turn_NW.png"
-        if "S" in directions and "E" in directions: return "tile_turn_SE.png"
-        if "S" in directions and "W" in directions: return "tile_turn_SW.png"
-    elif tile_type == "t_section":
-        missing = {"N", "E", "S", "W"} - set(directions)
-        return f"tile_t_section_{missing.pop()}.png"
-    elif tile_type == "dead_end":
-        return f"tile_dead_end_{directions[0]}.png"
-    return "tile_crossroad.png"
+# Helper function (improved to handle directions correctly)
+def parse_directions(open_directions):
+    if isinstance(open_directions, str):
+        try:
+            return json.loads(open_directions)
+        except:
+            return [open_directions]
+    return open_directions
 
 # Endpoint to list game sessions
 @app.get("/game-sessions", response_model=List[GameSessionResponse])
@@ -124,7 +110,7 @@ def list_game_sessions(db: Session = Depends(get_db)):
 # Endpoint to create a new game session
 @app.post("/create-game-session", response_model=GameSessionResponse)
 def create_game_session(request: GameSessionCreateRequest, db: Session = Depends(get_db)):
-    labyrinth = generate_labyrinth(size=request.size, seed=request.seed, db=db)
+    labyrinth, _ = generate_labyrinth(size=request.size, seed=request.seed, db=db)
 
     game_session = GameSession(
         seed=labyrinth.seed,
@@ -141,18 +127,26 @@ def create_game_session(request: GameSessionCreateRequest, db: Session = Depends
 # Endpoint to generate labyrinth without session creation
 @app.post("/generate-labyrinth", response_model=LabyrinthResponse)
 def generate_labyrinth_visual(request: GenerateLabyrinthRequest, db: Session = Depends(get_db)):
-    labyrinth = generate_labyrinth(size=request.size, seed=request.seed, db=db)
+    labyrinth, tiles_response = generate_labyrinth(size=request.size, seed=request.seed, db=db)
 
-    tiles_data = [
-        LabyrinthTile(
-            x=tile.x,
-            y=tile.y,
-            type=tile.type,
-            open_directions=list(tile.open_directions),
-            image=get_image_name(tile.type, tile.open_directions)
+    tiles_data = []
+    for tile_info in tiles_response:
+        tile_db = db.query(Tile).filter(
+            Tile.labyrinth_id == labyrinth.id,
+            Tile.x == tile_info["x"],
+            Tile.y == tile_info["y"]
+        ).first()
+
+        directions = parse_directions(tile_db.open_directions)
+
+        tile = LabyrinthTile(
+            x=tile_db.x,
+            y=tile_db.y,
+            type=tile_db.type,
+            open_directions=directions,
+            image=tile_info["image"]
         )
-        for tile in db.query(Tile).filter(Tile.labyrinth_id == labyrinth.id).all()
-    ]
+        tiles_data.append(tile)
 
     return LabyrinthResponse(
         seed=labyrinth.seed,
