@@ -32,8 +32,11 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
 
     labyrinth = Labyrinth(size=size, seed=seed)
     db.add(labyrinth)
+    db.commit()                   # <-- Commit here first
+    db.refresh(labyrinth)         # <-- Immediately refresh to populate labyrinth.id
 
-    # Create the labyrinth tiles and set start_x/start_y values properly
+    # Now labyrinth.id is correctly populated and usable
+
     visited = [[False] * size for _ in range(size)]
     tile_map = {}
 
@@ -56,22 +59,21 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
     start_x, start_y = random.randint(0, size - 1), random.randint(0, size - 1)
     dfs(start_x, start_y)
 
-    # Set start_x and start_y on labyrinth before committing
     labyrinth.start_x, labyrinth.start_y = start_x, start_y
+    db.commit()  # Commit again after updating labyrinth start coordinates
 
     for (x, y), tile_data in tile_map.items():
         directions = sorted(tile_data['open_directions'])
         tile_type = get_tile_type_from_directions(directions)
         tile = Tile(
-            labyrinth_id=labyrinth.id,
+            labyrinth_id=labyrinth.id,  # Now labyrinth.id is correct
             x=x,
             y=y,
             type=tile_type,
-            open_directions=json.dumps(directions)  # Explicitly store directions as JSON string
+            open_directions=json.dumps(directions)
         )
         db.add(tile)
 
-    # Commit after all changes are done, including setting start_x and start_y
-    db.commit()
-    db.refresh(labyrinth)
+    db.commit()  # Final commit for all tiles
+
     return labyrinth
