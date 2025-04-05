@@ -37,7 +37,7 @@ def get_image_filename(tile_type, directions):
     else:  # crossroad
         return "tile_crossroad.png"
 
-def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth:
+def generate_labyrinth(size: int, seed: Optional[str], db: Session):
     if size < 4 or size > 10:
         raise ValueError("Size must be between 4 and 10")
 
@@ -78,7 +78,6 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
         directions = sorted(tile_data['open_directions'])
         tile_type = get_tile_type_from_directions(directions)
 
-        # Store single directions plainly, multiple as JSON
         open_dirs_db = directions[0] if len(directions) == 1 else json.dumps(directions)
 
         tile = Tile(
@@ -90,18 +89,16 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
         )
         db.add(tile)
 
-        # Add tile image filename explicitly for frontend use
         tile_image = get_image_filename(tile_type, directions)
         tiles_response.append({
             "x": x,
             "y": y,
             "type": tile_type,
-            "image": tile_image  # correct filename directly
+            "image": tile_image
         })
 
     db.commit()
 
-    # Add tiles_response to labyrinth object if needed
-    labyrinth.tiles = tiles_response
-
-    return labyrinth
+    # DO NOT assign tiles_response to labyrinth ORM object
+    # Return them separately instead
+    return labyrinth, tiles_response
