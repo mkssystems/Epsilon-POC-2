@@ -1,7 +1,11 @@
-id,name,type,age,role,backstory_path
-f1cbc2db-2d59-4d4a-ba03-a15bed7b02d5,Captain Morgan Ashford,player,38,Strategist / Ex-Bounty Hunter,assets/backstories/player_captain_morgan_ashford.md
-f1fbd6f0-9d6b-4615-86cf-693a972bb518,Julian Rosales,player,41,Field Medic / Support,assets/backstories/player_julian_rosales.md
-e5a31c7c-1f0a-45cf-83b0-bfb284e918da,Blake Ryder,player,—,Wounded NPC,assets/backstories/player_blake_ryder.md
-74169859-b309-4e56-81c7-9980aaa51b8a,Lieutenant Yuki Tanaka,player,29,Combat Specialist / Tactician,assets/backstories/player_lieutenant_yuki_tanaka.md
-e09a79b5-b15e-42ed-90e5-c9b006002860,Kateryna “Kat” Markova,player,34,Engineer / Hacker,assets/backstories/player_kateryna_kat_markova.md
-c9d99889-53a3-46d7-9a73-cd46688ac08c,Vikram Iyer,player,36,Technician / AI Ethicist,assets/backstories/player_vikram_iyer.md
+id,name,type,age,role,backstory_path,portrait_path
+f1cbc2db-2d59-4d4a-ba03-a15bed7b02d5,Captain Morgan Ashford,player,38,Strategist / Ex-Bounty Hunter,assets/backstories/player_captain_morgan_ashford.md,assets/portraits/player_captain_morgan_ashford.png
+f1fbd6f0-9d6b-4615-86cf-693a972bb518,Julian Rosales,player,41,Field Medic / Support,assets/backstories/player_julian_rosales.md,assets/portraits/player_julian_rosales.png
+e5a31c7c-1f0a-45cf-83b0-bfb284e918da,Blake Ryder,player,32,Combat Hacker / Wildcard,assets/backstories/player_blake_ryder.md,assets/portraits/player_blake_ryder.png
+74169859-b309-4e56-81c7-9980aaa51b8a,Lieutenant Yuki Tanaka,player,29,Combat Specialist / Tactician,assets/backstories/player_lieutenant_yuki_tanaka.md,assets/portraits/player_lieutenant_yuki_tanaka.png
+e09a79b5-b15e-42ed-90e5-c9b006002860,Kateryna “Kat” Markova,player,34,Engineer / Hacker,assets/backstories/player_kateryna_kat_markova.md,assets/portraits/player_kateryna_kat_markova.png
+c9d99889-53a3-46d7-9a73-cd46688ac08c,Vikram Iyer,player,36,Technician / AI Ethicist,assets/backstories/player_vikram_iyer.md,assets/portraits/player_vikram_iyer.png
+bd040546-9b98-4503-a9ce-e6f20ce0c632,The Fused One,enemy,—,Boss Unit,assets/backstories/enemy_the_fused_one.md,assets/portraits/enemy_the_fused_one.png
+96ee8178-ae7f-403b-b981-07fc47dc491c,Twisted Crew,enemy,—,Grunt Enemy,assets/backstories/enemy_twisted_crew.md,assets/portraits/enemy_twisted_crew.png
+324f317b-b53f-4dd3-be4b-54e3af73c0e3,9K-M Unit,enemy,—,Heavy Unit,assets/backstories/enemy_9k_m_unit.md,assets/portraits/enemy_9k_m_unit.png
+f2b32aab-13c6-4477-bbc2-d6258d9e1e4d,Lt. Hale,npc,—,Wounded NPC,assets/backstories/npc_lt_hale.md,assets/portraits/npc_lt_hale.png
