@@ -11,8 +11,8 @@ class Tile(Base):
     labyrinth_id = Column(UUID(as_uuid=True), ForeignKey("labyrinths.id"), nullable=False)
     x = Column(Integer, nullable=False)
     y = Column(Integer, nullable=False)
-    type = Column(String(50), nullable=False)
-    open_directions = Column(String(10), nullable=False)
+    type = Column(String(100), nullable=False)
+    open_directions = Column(String(100), nullable=False)
     revealed = Column(Boolean, nullable=False, default=False)  # Added revealed column
 
     labyrinth = relationship("Labyrinth", back_populates="tiles")
