@@ -22,6 +22,21 @@ def get_tile_type_from_directions(directions):
     else:
         return "crossroad"
 
+def get_image_filename(tile_type, directions):
+    if tile_type == "dead_end":
+        return f"tile_dead_end_{directions[0]}.png"
+    elif tile_type == "corridor":
+        dirs = ''.join(sorted(directions))
+        return f"tile_corridor_{dirs}.png"
+    elif tile_type == "turn":
+        dirs = ''.join(sorted(directions))
+        return f"tile_turn_{dirs}.png"
+    elif tile_type == "t_section":
+        missing_dir = (set("NSEW") - set(directions)).pop()
+        return f"tile_t_section_{missing_dir}.png"
+    else:  # crossroad
+        return "tile_crossroad.png"
+
 def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth:
     if size < 4 or size > 10:
         raise ValueError("Size must be between 4 and 10")
@@ -49,29 +64,44 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
 
         tile_map[(x, y)] = {'x': x, 'y': y, 'open_directions': current_open}
 
-    # FIRST: Generate labyrinth structure to get start coordinates
     start_x, start_y = random.randint(0, size - 1), random.randint(0, size - 1)
     dfs(start_x, start_y)
 
-    # THEN: Create Labyrinth object AFTER generating coordinates
     labyrinth = Labyrinth(size=size, seed=seed, start_x=start_x, start_y=start_y)
     db.add(labyrinth)
-    db.commit()             # commit once here
-    db.refresh(labyrinth)   # refresh to get labyrinth.id
+    db.commit()
+    db.refresh(labyrinth)
 
-    # NOW create and insert Tiles
+    tiles_response = []
+
     for (x, y), tile_data in tile_map.items():
         directions = sorted(tile_data['open_directions'])
         tile_type = get_tile_type_from_directions(directions)
+
+        # Store single directions plainly, multiple as JSON
+        open_dirs_db = directions[0] if len(directions) == 1 else json.dumps(directions)
+
         tile = Tile(
-            labyrinth_id=labyrinth.id,  # labyrinth.id now correctly assigned
+            labyrinth_id=labyrinth.id,
             x=x,
             y=y,
             type=tile_type,
-            open_directions=json.dumps(directions)
+            open_directions=open_dirs_db
         )
         db.add(tile)
 
-    db.commit()  # commit all tiles in one go at the end
+        # Add tile image filename explicitly for frontend use
+        tile_image = get_image_filename(tile_type, directions)
+        tiles_response.append({
+            "x": x,
+            "y": y,
+            "type": tile_type,
+            "image": tile_image  # correct filename directly
+        })
+
+    db.commit()
+
+    # Add tiles_response to labyrinth object if needed
+    labyrinth.tiles = tiles_response
 
     return labyrinth
