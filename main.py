@@ -17,8 +17,11 @@ from models.tile import Tile
 from models.game_entities import Base as EntityBase
 from db.init_data import load_data
 
-from models.models import Entity, Equipment, Skill, Special
-from models.models import Base
+from models.game_entities import Entity
+from models.equipment import Equipment
+from models.skills import Skill
+from models.specials import Special
+
 
 from config import DATABASE_URL, init_db  # Import init_db from config
 import pandas as pd
