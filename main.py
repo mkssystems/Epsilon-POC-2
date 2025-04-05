@@ -14,14 +14,13 @@ from models.game_session import GameSession
 from models.labyrinth import Labyrinth
 from models.player import Player
 from models.tile import Tile
-from models.game_entities import Base as EntityBase, init_db
+from models.game_entities import Base as EntityBase
 from db.init_data import load_data
 
 from models.models import Entity, Equipment, Skill, Special
 from models.models import Base
 
-
-from config import DATABASE_URL
+from config import DATABASE_URL, init_db  # Import init_db from config
 import pandas as pd
 import os
 
@@ -46,12 +45,13 @@ def get_db():
 # Initialize database tables on app startup
 @app.on_event("startup")
 def startup():
-    EntityBase.metadata.create_all(bind=engine)
+    # Initialize database using the init_db function
+    init_db()  # Calling the init_db function to create tables
 
     if FORCE_REINIT_DB:
         print("⚠️ Reinitializing the database from scratch...")
-        EntityBase.metadata.drop_all(bind=engine)
-        EntityBase.metadata.create_all(bind=engine)
+        EntityBase.metadata.drop_all(bind=engine)  # Drop existing tables
+        EntityBase.metadata.create_all(bind=engine)  # Create tables from models
 
         # Load entity data from CSVs inside assets/seed
         df_entities = pd.read_csv("assets/seed/entities.csv")
