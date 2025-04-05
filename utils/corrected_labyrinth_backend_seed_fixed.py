@@ -30,13 +30,6 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
         seed = uuid.uuid4().hex
     random.seed(seed)
 
-    labyrinth = Labyrinth(size=size, seed=seed)
-    db.add(labyrinth)
-    db.commit()                   # <-- Commit here first
-    db.refresh(labyrinth)         # <-- Immediately refresh to populate labyrinth.id
-
-    # Now labyrinth.id is correctly populated and usable
-
     visited = [[False] * size for _ in range(size)]
     tile_map = {}
 
@@ -56,17 +49,22 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
 
         tile_map[(x, y)] = {'x': x, 'y': y, 'open_directions': current_open}
 
+    # FIRST: Generate labyrinth structure to get start coordinates
     start_x, start_y = random.randint(0, size - 1), random.randint(0, size - 1)
     dfs(start_x, start_y)
 
-    labyrinth.start_x, labyrinth.start_y = start_x, start_y
-    db.commit()  # Commit again after updating labyrinth start coordinates
+    # THEN: Create Labyrinth object AFTER generating coordinates
+    labyrinth = Labyrinth(size=size, seed=seed, start_x=start_x, start_y=start_y)
+    db.add(labyrinth)
+    db.commit()             # commit once here
+    db.refresh(labyrinth)   # refresh to get labyrinth.id
 
+    # NOW create and insert Tiles
     for (x, y), tile_data in tile_map.items():
         directions = sorted(tile_data['open_directions'])
         tile_type = get_tile_type_from_directions(directions)
         tile = Tile(
-            labyrinth_id=labyrinth.id,  # Now labyrinth.id is correct
+            labyrinth_id=labyrinth.id,  # labyrinth.id now correctly assigned
             x=x,
             y=y,
             type=tile_type,
@@ -74,6 +72,6 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session) -> Labyrinth
         )
         db.add(tile)
 
-    db.commit()  # Final commit for all tiles
+    db.commit()  # commit all tiles in one go at the end
 
     return labyrinth
