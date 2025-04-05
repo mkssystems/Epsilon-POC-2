@@ -7,8 +7,8 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from uuid import UUID
+import json
 
-# Explicitly import all model classes
 from models.base import Base
 from models.game_session import GameSession
 from models.labyrinth import Labyrinth
@@ -22,20 +22,16 @@ from models.equipment import Equipment
 from models.skills import Skill
 from models.specials import Special
 
-from config import DATABASE_URL, init_db  # Import init_db from config
+from config import DATABASE_URL, init_db
 import pandas as pd
 
-# FastAPI app initialization
 app = FastAPI()
 
-# SQLAlchemy database setup
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
-# Toggle for development-time DB reinit
-FORCE_REINIT_DB = True  # Set to False in production
+FORCE_REINIT_DB = True
 
-# Dependency to get the database session
 def get_db():
     db = SessionLocal()
     try:
@@ -43,7 +39,6 @@ def get_db():
     finally:
         db.close()
 
-# Initialize database tables on app startup
 @app.on_event("startup")
 def startup():
     init_db()
@@ -60,7 +55,6 @@ def startup():
 
         load_data(engine, df_entities, df_equipment, df_skills, df_specials)
 
-# Pydantic models
 class GameSessionCreateRequest(BaseModel):
     size: int
     seed: Optional[str] = None
@@ -93,7 +87,6 @@ class LabyrinthResponse(BaseModel):
     start_y: int
     tiles: List[LabyrinthTile]
 
-# Helper function (improved to handle directions correctly)
 def parse_directions(open_directions):
     if isinstance(open_directions, str):
         try:
@@ -102,12 +95,28 @@ def parse_directions(open_directions):
             return [open_directions]
     return open_directions
 
-# Endpoint to list game sessions
+def get_image_name(tile_type, directions):
+    directions = sorted(directions)
+    if tile_type == "crossroad":
+        return "tile_crossroad.png"
+    elif tile_type == "corridor":
+        return "tile_corridor_NS.png" if directions == ["N", "S"] else "tile_corridor_EW.png"
+    elif tile_type == "turn":
+        if directions == ["E", "N"]: return "tile_turn_NE.png"
+        elif directions == ["N", "W"]: return "tile_turn_NW.png"
+        elif directions == ["E", "S"]: return "tile_turn_SE.png"
+        elif directions == ["S", "W"]: return "tile_turn_SW.png"
+    elif tile_type == "t_section":
+        missing_direction = ({"N", "E", "S", "W"} - set(directions)).pop()
+        return f"tile_t_section_{missing_direction}.png"
+    elif tile_type == "dead_end":
+        return f"tile_dead_end_{directions[0]}.png"
+    return "tile_crossroad.png"
+
 @app.get("/game-sessions", response_model=List[GameSessionResponse])
 def list_game_sessions(db: Session = Depends(get_db)):
     return db.query(GameSession).all()
 
-# Endpoint to create a new game session
 @app.post("/create-game-session", response_model=GameSessionResponse)
 def create_game_session(request: GameSessionCreateRequest, db: Session = Depends(get_db)):
     labyrinth, _ = generate_labyrinth(size=request.size, seed=request.seed, db=db)
@@ -124,7 +133,6 @@ def create_game_session(request: GameSessionCreateRequest, db: Session = Depends
 
     return game_session
 
-# Endpoint to generate labyrinth without session creation
 @app.post("/generate-labyrinth", response_model=LabyrinthResponse)
 def generate_labyrinth_visual(request: GenerateLabyrinthRequest, db: Session = Depends(get_db)):
     labyrinth, tiles_response = generate_labyrinth(size=request.size, seed=request.seed, db=db)
@@ -138,13 +146,14 @@ def generate_labyrinth_visual(request: GenerateLabyrinthRequest, db: Session = D
         ).first()
 
         directions = parse_directions(tile_db.open_directions)
+        image_name = get_image_name(tile_db.type, directions)
 
         tile = LabyrinthTile(
             x=tile_db.x,
             y=tile_db.y,
             type=tile_db.type,
             open_directions=directions,
-            image=tile_info["image"]
+            image=image_name
         )
         tiles_data.append(tile)
 
@@ -155,15 +164,11 @@ def generate_labyrinth_visual(request: GenerateLabyrinthRequest, db: Session = D
         tiles=tiles_data
     )
 
-# Endpoint to destroy all game sessions
 @app.delete("/destroy-all-sessions")
 def destroy_all_sessions(db: Session = Depends(get_db)):
     db.query(GameSession).delete()
     db.commit()
     return {"detail": "All game sessions deleted"}
 
-# Serve frontend from 'frontend' directory
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
-
-# Serve tiles explicitly
 app.mount("/tiles", StaticFiles(directory="frontend/tiles"), name="tiles")
