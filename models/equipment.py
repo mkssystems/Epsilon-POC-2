@@ -5,12 +5,13 @@ from . import Base  # Assuming Base is imported from your SQLAlchemy setup
 class Equipment(Base):
     __tablename__ = 'equipment'
     
-    id = Column(String, primary_key=True)  # Use UUID or String for the ID
-    entity_id = Column(String, ForeignKey('entities.id'))  # ForeignKey reference to entities table
+    # Define the columns
+    id = Column(String, primary_key=True)  # Use String or UUID for the primary key
+    entity_id = Column(String, ForeignKey('entities.id'))  # ForeignKey reference to 'entities' table
     name = Column(String, nullable=False)
     description = Column(Text)
     
-    # Relationship to the Entity model (optional)
+    # Relationship to the Entity model
     entity = relationship('Entity', back_populates='equipment')
     
     def __repr__(self):
