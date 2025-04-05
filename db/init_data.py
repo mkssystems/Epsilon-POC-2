@@ -12,7 +12,7 @@ def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
     session = Session(bind=engine)
 
     try:
-        # Load entities into the 'entities' table
+        # Load entities into the 'entities' table first
         for index, row in df_entities.iterrows():
             entity = Entity(
                 id=row['id'],
@@ -24,14 +24,15 @@ def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
             )
             session.add(entity)
 
-        # Commit the entities to ensure they are inserted before equipment
+        # Commit the entities to ensure they are in the database
         session.commit()
 
-        # Load equipment into the 'equipment' table
+        # Now load equipment into the 'equipment' table
         for index, row in df_equipment.iterrows():
+            # Make sure entity_id in equipment matches the id of an entity already inserted
             equipment = Equipment(
                 id=row['id'],
-                entity_id=row['entity_id'],  # This references the already committed entity
+                entity_id=row['entity_id'],  # This should match an existing entity's ID
                 name=row['name'],
                 description=row['description']
             )
