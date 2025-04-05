@@ -12,6 +12,7 @@ class Entity(Base):
     age = Column(String)
     role = Column(String)
     backstory_path = Column(String)
+    portrait_path = Column(String)  # New column for portrait path
     
     # Relationships
     equipment = relationship('Equipment', back_populates='entity')
