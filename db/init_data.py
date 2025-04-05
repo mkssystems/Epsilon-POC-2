@@ -24,11 +24,14 @@ def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
             )
             session.add(entity)
 
+        # Commit the entities to ensure they are inserted before equipment
+        session.commit()
+
         # Load equipment into the 'equipment' table
         for index, row in df_equipment.iterrows():
             equipment = Equipment(
                 id=row['id'],
-                entity_id=row['entity_id'],
+                entity_id=row['entity_id'],  # This references the already committed entity
                 name=row['name'],
                 description=row['description']
             )
