@@ -28,7 +28,6 @@ for index, row in df_specials.iterrows():
     special = Special(
         id=row['id'],
         entity_id=row['entity_id'],
-        name=row['name'],
         description=row['description']
     )
     session.add(special)
@@ -50,7 +49,6 @@ for index, row in df_skills.iterrows():
         entity_id=row['entity_id'],
         name=row['name'],
         description=row['description'],
-        level=row['level']
     )
     session.add(skill)
 
