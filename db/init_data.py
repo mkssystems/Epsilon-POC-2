@@ -21,6 +21,7 @@ def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
                 age=row['age'],
                 role=row['role'],
                 backstory_path=row['backstory_path']
+                portrait_path=row.get('portrait_path')  # Include portrait_path from the CSV
             )
             session.add(entity)
         
