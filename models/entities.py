@@ -13,5 +13,8 @@ class Entity(Base):
     # Add this relationship to link entities to equipment
     equipment = relationship('Equipment', back_populates='entity')
 
+    # Relationship to the Skill model
+    skills = relationship('Skill', back_populates='entity')
+
     def __repr__(self):
         return f"<Entity(name={self.name}, type={self.type}, age={self.age}, role={self.role})>"
