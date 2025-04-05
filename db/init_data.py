@@ -1,48 +1,58 @@
 import pandas as pd
-from sqlalchemy.orm import sessionmaker
-from models import Entity, Equipment  # Make sure the correct paths are used
+from db import session  # Assuming session is already configured
+from db.models.entity import Entity
+from db.models.equipment import Equipment
+from db.models.skill import Skill
+from db.models.special import Special
 
-def load_entities_data(session):
-    # Read the entities CSV file
-    df_entities = pd.read_csv('assets/seed/entities.csv')
-    
-    # Iterate through DataFrame and insert records into the entities table
-    for _, row in df_entities.iterrows():
-        entity = Entity(
-            id=row['id'],
-            name=row['name'],
-            type=row['type'],
-            age=row['age'],
-            role=row['role'],
-            backstory_path=row['backstory_path']
-        )
-        session.add(entity)
-    
-    session.commit()
+# Load CSV Files
+df_entities = pd.read_csv('assets/seed/entities.csv')
+df_equipment = pd.read_csv('assets/seed/equipment.csv')
+df_skills = pd.read_csv('assets/seed/skills.csv')
+df_specials = pd.read_csv('assets/seed/specials.csv')
 
+# Create Entity Instances
+for index, row in df_entities.iterrows():
+    entity = Entity(
+        id=row['id'],
+        name=row['name'],
+        type=row['type'],
+        age=row['age'],
+        role=row['role'],
+        backstory_path=row['backstory_path']
+    )
+    session.add(entity)
 
-def load_equipment_data(session):
-    # Read the equipment CSV file
-    df_equipment = pd.read_csv('assets/seed/equipment.csv')
-    
-    # Iterate through DataFrame and insert records into the equipment table
-    for _, row in df_equipment.iterrows():
-        equipment = Equipment(
-            id=row['id'],
-            entity_id=row['entity_id'],  # This links the equipment to the correct entity
-            name=row['name'],
-            description=row['description'] if 'description' in row else "No description available"
-        )
-        session.add(equipment)
-    
-    session.commit()
+# Create Special Instances
+for index, row in df_specials.iterrows():
+    special = Special(
+        id=row['id'],
+        entity_id=row['entity_id'],
+        name=row['name'],
+        description=row['description']
+    )
+    session.add(special)
 
+# Create Equipment Instances
+for index, row in df_equipment.iterrows():
+    equipment = Equipment(
+        id=row['id'],
+        entity_id=row['entity_id'],
+        name=row['name'],
+        description=row['description']
+    )
+    session.add(equipment)
 
-def load_data(engine):
-    # Create a session
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    
-    # Load data into the database
-    load_entities_data(session)
-    load_equipment_data(session)
+# Create Skill Instances
+for index, row in df_skills.iterrows():
+    skill = Skill(
+        id=row['id'],
+        entity_id=row['entity_id'],
+        name=row['name'],
+        description=row['description'],
+        level=row['level']
+    )
+    session.add(skill)
+
+# Commit to DB
+session.commit()
