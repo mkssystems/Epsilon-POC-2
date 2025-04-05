@@ -1,7 +1,10 @@
 # db/init_data.py
 import pandas as pd
 from sqlalchemy.orm import Session
-from models.models import Entity, Equipment, Skill, Special
+from models.game_entities import Entity  # Import Entity from game_entities
+from models.equipment import Equipment  # Import Equipment from equipment
+from models.skills import Skill  # Import Skill from skills
+from models.specials import Special  # Import Special from specials
 
 # Function to load data into the database
 def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
