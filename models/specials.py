@@ -8,7 +8,6 @@ class Special(Base):
 
     id = Column(String, primary_key=True)
     entity_id = Column(String, ForeignKey('entities.id'))  # Foreign key to the Entity table
-    name = Column(String)
     description = Column(String)
 
     # Relationship to the Entity model
