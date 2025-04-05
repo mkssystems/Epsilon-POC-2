@@ -1,8 +1,14 @@
+from sqlalchemy import Column, String, Integer
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
+# Declare the base for all models
+Base = declarative_base()
 
 class Entity(Base):
     __tablename__ = 'entities'
     
+    # Define columns with correct data types
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     type = Column(String)
@@ -10,13 +16,9 @@ class Entity(Base):
     role = Column(String)
     backstory_path = Column(String)
     
-    # Add this relationship to link entities to equipment
+    # Add relationships to link entities to other models (Equipment, Skill, Special)
     equipment = relationship('Equipment', back_populates='entity')
-
-    # Relationship to the Skill model
     skills = relationship('Skill', back_populates='entity')
-
-     # Add relationship to Special
     specials = relationship('Special', back_populates='entity')
 
     def __repr__(self):
