@@ -9,7 +9,7 @@ class Entity(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     type = Column(String)
-    age = Column(Integer)
+    age = Column(String)
     role = Column(String)
     backstory_path = Column(String)
     
