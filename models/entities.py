@@ -16,5 +16,8 @@ class Entity(Base):
     # Relationship to the Skill model
     skills = relationship('Skill', back_populates='entity')
 
+     # Add relationship to Special
+    specials = relationship('Special', back_populates='entity')
+
     def __repr__(self):
         return f"<Entity(name={self.name}, type={self.type}, age={self.age}, role={self.role})>"
