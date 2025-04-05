@@ -1,15 +1,17 @@
-from sqlalchemy import Column, String, Integer, Text
-from . import Base  # Assuming Base is imported from your SQLAlchemy setup
+from sqlalchemy.orm import relationship
 
 class Entity(Base):
     __tablename__ = 'entities'
     
-    id = Column(String, primary_key=True)  # Use UUID or String for the ID
+    id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     type = Column(String)
     age = Column(Integer)
     role = Column(String)
-    backstory_path = Column(String)  # Path to the backstory file
+    backstory_path = Column(String)
     
+    # Add this relationship to link entities to equipment
+    equipment = relationship('Equipment', back_populates='entity')
+
     def __repr__(self):
         return f"<Entity(name={self.name}, type={self.type}, age={self.age}, role={self.role})>"
