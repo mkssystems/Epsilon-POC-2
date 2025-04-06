@@ -4,7 +4,6 @@ from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
 from .base import Base
-from db import db  # <-- This import is required to use db.relationship
 
 class GameSession(Base):
     __tablename__ = "game_sessions"
@@ -18,5 +17,4 @@ class GameSession(Base):
 
     labyrinth = relationship("Labyrinth", back_populates="game_sessions")
     players = relationship("Player", back_populates="game_session", cascade="all, delete-orphan")
-    
-    connected_clients = db.relationship('MobileClient', backref='game_session', lazy=True)
+    connected_clients = relationship('MobileClient', back_populates='game_session', lazy='select')
