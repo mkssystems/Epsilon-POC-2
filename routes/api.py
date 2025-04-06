@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from db.session import get_db
 from models.game_session import GameSession
 from models.mobile_client import MobileClient
 from uuid import UUID
 from datetime import datetime
 from schemas import ClientJoinRequest
+from main import get_db  # Correct import from main.py
+
 
 router = APIRouter()
 
