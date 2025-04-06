@@ -25,6 +25,9 @@ from models.specials import Special
 from config import DATABASE_URL, init_db
 import pandas as pd
 
+# Import API router
+from routes.api import router as api_router
+
 app = FastAPI()
 
 engine = create_engine(DATABASE_URL)
@@ -169,6 +172,9 @@ def destroy_all_sessions(db: Session = Depends(get_db)):
     db.query(GameSession).delete()
     db.commit()
     return {"detail": "All game sessions deleted"}
+
+# Include the routes from routes/api.py
+app.include_router(api_router)
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 app.mount("/tiles", StaticFiles(directory="frontend/tiles"), name="tiles")
