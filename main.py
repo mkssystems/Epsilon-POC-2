@@ -22,6 +22,8 @@ from models.equipment import Equipment
 from models.skills import Skill
 from models.specials import Special
 
+from db.session import get_db
+
 from config import DATABASE_URL, init_db
 import pandas as pd
 
