@@ -25,6 +25,9 @@ from models.specials import Special
 from config import DATABASE_URL, init_db
 import pandas as pd
 
+# Import your API router
+from routes.api import router as api_router
+
 app = FastAPI()
 
 engine = create_engine(DATABASE_URL)
@@ -55,6 +58,10 @@ def startup():
 
         load_data(engine, df_entities, df_equipment, df_skills, df_specials)
 
+# 👇 Add this line to register your router explicitly
+app.include_router(api_router)
+
+# Existing routes below (unchanged):
 class GameSessionCreateRequest(BaseModel):
     size: int
     seed: Optional[str] = None
