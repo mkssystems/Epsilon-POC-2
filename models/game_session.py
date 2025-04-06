@@ -4,6 +4,8 @@ from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
 from .base import Base
+from .mobile_client import MobileClient
+
 
 class GameSession(Base):
     __tablename__ = "game_sessions"
