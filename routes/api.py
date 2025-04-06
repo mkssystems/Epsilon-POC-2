@@ -1,41 +1,56 @@
-@api.route('/game_sessions/<int:session_id>/join', methods=['POST'])
-def join_game_session(session_id):
-    data = request.json
-    client_id = data.get('client_id')
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from db.session import get_db
+from models.game_session import GameSession
+from models.mobile_client import MobileClient
+from uuid import UUID
+from datetime import datetime
+from schemas import ClientJoinRequest
 
-    session = GameSession.query.get(session_id)
-    if not session:
-        return jsonify({'error': 'Session not found'}), 404
-    
-    existing_client = MobileClient.query.filter_by(client_id=client_id).first()
-    if existing_client:
-        return jsonify({'message': 'Client already connected'}), 200
-    
-    new_client = MobileClient(client_id=client_id, game_session_id=session.id)
-    db.session.add(new_client)
-    db.session.commit()
-    
-    return jsonify({
-        'message': 'Connected successfully',
-        'session_id': session.id,
-        'map_seed': session.map_seed,
-        'labyrinth_id': session.labyrinth_id
-    }), 200
-
-@api.route('/game_sessions/<int:session_id>/clients', methods=['GET'])
-def get_connected_clients(session_id):
-    session = GameSession.query.get(session_id)
-    if not session:
-        return jsonify({'error': 'Session not found'}), 404
-    
-    clients = [{
-        'client_id': client.client_id,
-        'connected_at': client.connected_at.isoformat()
-    } for client in session.connected_clients]
-    
-    return jsonify({'clients': clients}), 200
+router = APIRouter()
 
 @router.get('/api/game_sessions')
 async def get_game_sessions(db: Session = Depends(get_db)):
     sessions = db.query(GameSession).all()
     return {"sessions": sessions}
+
+@router.post('/api/game_sessions/{session_id}/join')
+async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Session = Depends(get_db)):
+    session = db.query(GameSession).filter(GameSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail='Session not found')
+
+    existing_client = db.query(MobileClient).filter(MobileClient.client_id == request.client_id).first()
+    if existing_client:
+        return {'message': 'Client already connected'}
+
+    new_client = MobileClient(
+        client_id=request.client_id,
+        game_session_id=session.id,
+        connected_at=datetime.utcnow()
+    )
+    db.add(new_client)
+    db.commit()
+    db.refresh(new_client)
+
+    return {
+        'message': 'Connected successfully',
+        'session_id': session.id,
+        'map_seed': session.seed,
+        'labyrinth_id': session.labyrinth_id
+    }
+
+@router.get('/api/game_sessions/{session_id}/clients')
+async def get_connected_clients(session_id: UUID, db: Session = Depends(get_db)):
+    session = db.query(GameSession).filter(GameSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail='Session not found')
+
+    return {
+        'clients': [
+            {
+                'client_id': client.client_id,
+                'connected_at': client.connected_at.isoformat()
+            } for client in session.connected_clients
+        ]
+    }
