@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, sessionmaker
 from pydantic import BaseModel
@@ -16,13 +16,12 @@ from models.player import Player
 from models.tile import Tile
 from models.game_entities import Base as EntityBase
 from db.init_data import load_data
+from db.session import get_db  # Use only this import for DB sessions
 
 from models.game_entities import Entity
 from models.equipment import Equipment
 from models.skills import Skill
 from models.specials import Special
-
-from db.session import get_db
 
 from config import DATABASE_URL, init_db
 import pandas as pd
@@ -36,13 +35,6 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
 FORCE_REINIT_DB = True
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @app.on_event("startup")
 def startup():
