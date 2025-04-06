@@ -1,170 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Epsilon-POC-Playground</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background-color: #f7f7f7;
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f7f7f7; }
+    .tile-img { width: 80px; height: 80px; object-fit: cover; border: 1px solid #aaa; }
+    .row { display: flex; }
+    #map { margin-top: 20px; }
+    .controls, .actions, .sessions, .connected-clients { 
+      margin-bottom: 15px; 
+      padding: 10px; 
+      background-color: #fff; 
+      border: 1px solid #ddd; 
+      border-radius: 5px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
     }
-
-    .tile-img {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
-      border: 1px solid #aaa;
-    }
-
-    .row {
-      display: flex;
-    }
-
-    #map {
-      margin-top: 20px;
-    }
-
-    .controls,
-    .actions,
-    .sessions,
-    .clients {
-      margin-bottom: 15px;
-      padding: 10px;
-      background-color: #fff;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    button {
-      margin-right: 5px;
-      padding: 5px 10px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    select {
-      padding: 5px;
-      font-size: 14px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    th,
-    td {
-      padding: 8px;
-      text-align: left;
-      border-bottom: 1px solid #ddd;
-    }
-
-    th {
-      background-color: #f2f2f2;
-    }
+    input, button { margin: 5px; padding: 6px; border-radius: 3px; border: 1px solid #ccc; }
+    button { background-color: #4CAF50; color: white; cursor: pointer; border: none; }
+    button:hover { background-color: #45a049; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+    th { background-color: #4CAF50; color: white; }
   </style>
 </head>
-
 <body>
-  <h1>Epsilon-POC Playground</h1>
+  <h1>Epsilon-POC-Playground</h1>
 
   <div class="controls">
-    <h3>Game Controls</h3>
-    <button onclick="move('up')">Up</button>
-    <button onclick="move('down')">Down</button>
-    <button onclick="move('left')">Left</button>
-    <button onclick="move('right')">Right</button>
+    <label>Map Size (4-10):</label>
+    <input type="number" id="size" min="4" max="10" value="7">
+    <label>Seed (optional):</label>
+    <input type="text" id="seed">
   </div>
 
   <div class="actions">
-    <h3>Actions</h3>
-    <button onclick="performAction('attack')">Attack</button>
-    <button onclick="performAction('defend')">Defend</button>
-    <button onclick="performAction('use_item')">Use Item</button>
+    <button onclick="generateLabyrinth(false)">Generate Random Map</button>
+    <button onclick="generateLabyrinth(true)">Generate from Seed</button>
   </div>
+
+  <div id="display-seed"></div>
+  <div id="map"></div>
 
   <div class="sessions">
-    <h3>Game Sessions</h3>
-    <select id="session-select" onchange="fetchConnectedClients()">
-      <!-- Options will be populated dynamically -->
-    </select>
-    <button onclick="createSession()">Create New Session</button>
+    <h2>Game Sessions</h2>
+    <button onclick="createGameSession()">Create Game Session</button>
+    <button onclick="fetchGameSessions()">Refresh Sessions List</button>
+    <button onclick="destroyAllSessions()">Destroy All Sessions</button>
+
+    <table id="sessions-table">
+      <thead>
+        <tr>
+          <th>Session ID</th>
+          <th>Seed</th>
+          <th>Labyrinth ID</th>
+          <th>Start Position (X, Y)</th>
+          <th>Created At</th>
+        </tr>
+      </thead>
+      <tbody id="sessions-body"></tbody>
+    </table>
   </div>
 
-  <div class="clients">
-    <h3>Connected Mobile Clients</h3>
-    <ul id="clients-list">
-      <!-- Connected clients will be listed here -->
-    </ul>
-  </div>
-
-  <div id="map">
-    <h3>Game Map</h3>
-    <!-- Map rendering will be handled here -->
+  <div class="connected-clients">
+    <h2>Connected Mobile Clients</h2>
+    <ul id="clients-list"></ul>
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      fetchSessions();
-    });
-
-    function fetchSessions() {
-      fetch('/api/game_sessions')
-        .then(response => response.json())
-        .then(data => {
-          const sessionSelect = document.getElementById('session-select');
-          sessionSelect.innerHTML = '';
-          data.sessions.forEach(session => {
-            const option = document.createElement('option');
-            option.value = session.id;
-            option.textContent = `Session ${session.id}`;
-            sessionSelect.appendChild(option);
-          });
-          fetchConnectedClients(); // Fetch clients for the first session by default
-        })
-        .catch(error => console.error('Error fetching sessions:', error));
+    async function generateLabyrinth(useSeed) {
+      const size = document.getElementById("size").value;
+      const seed = useSeed ? document.getElementById("seed").value : "";
+      const response = await fetch("/generate-labyrinth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ size, seed })
+      });
+      if (!response.ok) return alert("Error generating labyrinth!");
+      const data = await response.json();
+      document.getElementById("display-seed").innerText = `Seed used: ${data.seed}`;
+      visualizeMap(data.tiles, size);
     }
 
-    function fetchConnectedClients() {
-      const sessionId = document.getElementById('session-select').value;
-      fetch(`/api/game_sessions/${sessionId}/clients`)
-        .then(response => response.json())
-        .then(data => {
-          const clientsList = document.getElementById('clients-list');
-          clientsList.innerHTML = '';
-          data.clients.forEach(client => {
-            const listItem = document.createElement('li');
-            listItem.textContent = `Client ID: ${client.client_id}, Connected At: ${new Date(client.connected_at).toLocaleString()}`;
-            clientsList.appendChild(listItem);
-          });
-        })
-        .catch(error => console.error('Error fetching connected clients:', error));
+    function visualizeMap(tiles, size) {
+      const map = document.getElementById("map");
+      map.innerHTML = "";
+      for (let y = 0; y < size; y++) {
+        const row = document.createElement("div");
+        row.className = "row";
+        for (let x = 0; x < size; x++) {
+          const tile = tiles.find(t => t.x === x && t.y === y);
+          const img = document.createElement("img");
+          img.className = "tile-img";
+          img.src = `/tiles/${tile.image}`;
+          row.appendChild(img);
+        }
+        map.appendChild(row);
+      }
     }
 
-    function createSession() {
-      fetch('/api/game_sessions', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => {
-          fetchSessions();
-        })
-        .catch(error => console.error('Error creating session:', error));
+    async function createGameSession() {
+      const size = document.getElementById("size").value;
+      const seed = document.getElementById("seed").value;
+      const response = await fetch("/create-game-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ size, seed })
+      });
+      if (!response.ok) return alert("Error creating game session!");
+      fetchGameSessions();
     }
 
-    function move(direction) {
-      // Implement movement logic here
-      console.log(`Moving ${direction}`);
+    async function fetchGameSessions() {
+      const res = await fetch("/game-sessions");
+      const sessions = await res.json();
+      const tbody = document.getElementById("sessions-body");
+      tbody.innerHTML = sessions.map(s => `
+        <tr onclick="fetchConnectedClients('${s.id}')">
+          <td>${s.id}</td>
+          <td>${s.seed}</td>
+          <td>${s.labyrinth_id}</td>
+          <td>(${s.start_x}, ${s.start_y})</td>
+          <td>${new Date(s.created_at).toLocaleString()}</td>
+        </tr>`).join("");
+
+      if(sessions.length > 0){
+        fetchConnectedClients(sessions[0].id);
+      }
     }
 
-    function performAction(action) {
-      // Implement action logic here
-      console.log(`Performing action: ${action}`);
+    async function destroyAllSessions() {
+      if (!confirm("Are you sure you want to destroy all sessions?")) return;
+      const res = await fetch('/destroy-all-sessions', { method: 'DELETE' });
+      if (!res.ok) alert("Failed to destroy sessions!");
+      fetchGameSessions();
     }
+
+    async function fetchConnectedClients(sessionId) {
+      const res = await fetch(`/api/game_sessions/${sessionId}/clients`);
+      if (!res.ok) {
+        document.getElementById("clients-list").innerHTML = "<li>Error fetching clients.</li>";
+        return;
+      }
+      const data = await res.json();
+      const clientsList = document.getElementById('clients-list');
+      clientsList.innerHTML = data.clients.map(client => `
+        <li>Client ID: ${client.client_id}, Connected At: ${new Date(client.connected_at).toLocaleString()}</li>
+      `).join('');
+    }
+
+    window.onload = fetchGameSessions;
   </script>
 </body>
-
 </html>
