@@ -17,3 +17,5 @@ class GameSession(Base):
 
     labyrinth = relationship("Labyrinth", back_populates="game_sessions")
     players = relationship("Player", back_populates="game_session", cascade="all, delete-orphan")
+    connected_clients = db.relationship('MobileClient', backref='game_session', lazy=True)
+
