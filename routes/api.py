@@ -34,3 +34,8 @@ def get_connected_clients(session_id):
     } for client in session.connected_clients]
     
     return jsonify({'clients': clients}), 200
+
+@router.get('/api/game_sessions')
+async def get_game_sessions(db: Session = Depends(get_db)):
+    sessions = db.query(GameSession).all()
+    return {"sessions": sessions}
