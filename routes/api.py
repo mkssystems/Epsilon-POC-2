@@ -61,13 +61,13 @@ async def get_connected_clients(session_id: UUID, db: Session = Depends(get_db))
 
 @router.post('/api/game_sessions/create')
 async def create_game_session(request: GameSessionCreateRequest, db: Session = Depends(get_db)):
-    labyrinth, _ = generate_labyrinth(request.size, request.seed, db)
+    labyrinth, _ = generate_labyrinth(request.size, None, db)
 
     new_session = GameSession(
         id=uuid4(),
         seed=labyrinth.seed,
         labyrinth_id=labyrinth.id,
-        size=request.size,  # fix here, previously missing
+        size=request.size,
         start_x=labyrinth.start_x,
         start_y=labyrinth.start_y,
         created_at=datetime.utcnow()
