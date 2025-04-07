@@ -5,5 +5,5 @@ class ClientJoinRequest(BaseModel):
     client_id: str
 
 class GameSessionCreateRequest(BaseModel):
-    seed: Optional[str] = None
-    labyrinth_id: Optional[str] = None
+    size: int                  # Explicitly required
+    seed: Optional[str] = None # Optional seed
