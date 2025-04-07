@@ -111,17 +111,17 @@
     }
 
     async function fetchGameSessions() {
-      const res = await fetch("/game-sessions");
-      const sessions = await res.json();
+      const res = await fetch("/api/game_sessions");
+      const {sessions} = await res.json();
       const tbody = document.getElementById("sessions-body");
       tbody.innerHTML = "";
       for (const session of sessions) {
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${session.id}</td>
-          <td>${session.seed ?? 'N/A'}</td>
-          <td>${session.size ?? 'N/A'}</td>
-          <td>${session.labyrinth_id ?? 'N/A'}</td>
+          <td>${session.seed}</td>
+          <td>${session.size}</td>
+          <td>${session.labyrinth_id}</td>
           <td>(${session.start_x}, ${session.start_y})</td>
           <td>${new Date(session.created_at).toLocaleString()}</td>
           <td id="clients-${session.id}">Loading...</td>
@@ -146,13 +146,9 @@
         return;
       }
       const data = await res.json();
-      if (data.clients.length === 0) {
-        cell.innerHTML = "No clients connected.";
-      } else {
-        cell.innerHTML = data.clients.map(c => `
+      cell.innerHTML = data.clients.length ? data.clients.map(c => `
           <div class="client-entry">Client ID: ${c.client_id}<br>Connected At: ${new Date(c.connected_at).toLocaleString()}</div>
-        `).join('');
-      }
+        `).join('') : "No clients connected.";
     }
 
     window.onload = fetchGameSessions;
