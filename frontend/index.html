@@ -101,13 +101,13 @@
     async function createGameSession() {
       const size = document.getElementById("size").value;
       const seed = document.getElementById("seed").value;
-      const response = await fetch("/create-game-session", {
+      const response = await fetch("/api/game_sessions/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ size, seed })
-      });
-      if (!response.ok) return alert("Error creating game session!");
-      fetchGameSessions();
+    });
+    if (!response.ok) return alert("Error creating game session!");
+    fetchGameSessions();
     }
 
     async function fetchGameSessions() {
