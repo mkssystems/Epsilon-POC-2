@@ -9,7 +9,7 @@
     .tile-img { width: 80px; height: 80px; object-fit: cover; border: 1px solid #aaa; }
     .row { display: flex; }
     #map { margin-top: 20px; }
-    .controls, .actions, .sessions, .connected-clients { 
+    .controls, .actions, .sessions { 
       margin-bottom: 15px; 
       padding: 10px; 
       background-color: #fff; 
@@ -21,8 +21,9 @@
     button { background-color: #4CAF50; color: white; cursor: pointer; border: none; }
     button:hover { background-color: #45a049; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+    th, td { padding: 8px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
     th { background-color: #4CAF50; color: white; }
+    .client-entry { margin-bottom: 5px; }
   </style>
 </head>
 <body>
@@ -57,15 +58,11 @@
           <th>Labyrinth ID</th>
           <th>Start Position (X, Y)</th>
           <th>Created At</th>
+          <th>Connected Mobile Clients</th>
         </tr>
       </thead>
       <tbody id="sessions-body"></tbody>
     </table>
-  </div>
-
-  <div class="connected-clients">
-    <h2>Connected Mobile Clients</h2>
-    <ul id="clients-list"></ul>
   </div>
 
   <script>
@@ -116,17 +113,19 @@
       const res = await fetch("/game-sessions");
       const sessions = await res.json();
       const tbody = document.getElementById("sessions-body");
-      tbody.innerHTML = sessions.map(s => `
-        <tr onclick="fetchConnectedClients('${s.id}')">
-          <td>${s.id}</td>
-          <td>${s.seed}</td>
-          <td>${s.labyrinth_id}</td>
-          <td>(${s.start_x}, ${s.start_y})</td>
-          <td>${new Date(s.created_at).toLocaleString()}</td>
-        </tr>`).join("");
-
-      if(sessions.length > 0){
-        fetchConnectedClients(sessions[0].id);
+      tbody.innerHTML = "";
+      for (const session of sessions) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${session.id}</td>
+          <td>${session.seed}</td>
+          <td>${session.labyrinth_id}</td>
+          <td>(${session.start_x}, ${session.start_y})</td>
+          <td>${new Date(session.created_at).toLocaleString()}</td>
+          <td id="clients-${session.id}">Loading...</td>
+        `;
+        tbody.appendChild(row);
+        fetchConnectedClients(session.id);
       }
     }
 
@@ -139,15 +138,19 @@
 
     async function fetchConnectedClients(sessionId) {
       const res = await fetch(`/api/game_sessions/${sessionId}/clients`);
+      const cell = document.getElementById(`clients-${sessionId}`);
       if (!res.ok) {
-        document.getElementById("clients-list").innerHTML = "<li>Error fetching clients.</li>";
+        cell.innerHTML = "Error fetching clients.";
         return;
       }
       const data = await res.json();
-      const clientsList = document.getElementById('clients-list');
-      clientsList.innerHTML = data.clients.map(client => `
-        <li>Client ID: ${client.client_id}, Connected At: ${new Date(client.connected_at).toLocaleString()}</li>
-      `).join('');
+      if (data.clients.length === 0) {
+        cell.innerHTML = "No clients connected.";
+      } else {
+        cell.innerHTML = data.clients.map(c => `
+          <div class="client-entry">Client ID: ${c.client_id}<br>Connected At: ${new Date(c.connected_at).toLocaleString()}</div>
+        `).join('');
+      }
     }
 
     window.onload = fetchGameSessions;
