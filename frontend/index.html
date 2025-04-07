@@ -119,9 +119,9 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${session.id}</td>
-          <td>${session.seed}</td>
-          <td>${session.size}</td>
-          <td>${session.labyrinth_id}</td>
+          <td>${session.seed ?? 'N/A'}</td>
+          <td>${session.size ?? 'N/A'}</td>
+          <td>${session.labyrinth_id ?? 'N/A'}</td>
           <td>(${session.start_x}, ${session.start_y})</td>
           <td>${new Date(session.created_at).toLocaleString()}</td>
           <td id="clients-${session.id}">Loading...</td>
