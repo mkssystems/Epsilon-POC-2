@@ -13,15 +13,7 @@ router = APIRouter()
 @router.get('/api/game_sessions')
 async def get_game_sessions(db: Session = Depends(get_db)):
     sessions = db.query(GameSession).all()
-    return {"sessions": [{
-        'id': str(session.id),
-        'seed': session.seed,
-        'size': session.size,
-        'labyrinth_id': str(session.labyrinth_id),
-        'start_x': session.start_x,
-        'start_y': session.start_y,
-        'created_at': session.created_at.isoformat()
-    } for session in sessions]}
+    return {"sessions": sessions}
 
 @router.post('/api/game_sessions/{session_id}/join')
 async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Session = Depends(get_db)):
@@ -69,13 +61,13 @@ async def get_connected_clients(session_id: UUID, db: Session = Depends(get_db))
 
 @router.post('/api/game_sessions/create')
 async def create_game_session(request: GameSessionCreateRequest, db: Session = Depends(get_db)):
-    labyrinth, _ = generate_labyrinth(request.size, None, db)
+    labyrinth, _ = generate_labyrinth(request.size, request.seed, db)
 
     new_session = GameSession(
         id=uuid4(),
         seed=labyrinth.seed,
         labyrinth_id=labyrinth.id,
-        size=request.size,  # <-- Explicitly set the size
+        size=request.size,  # fix here, previously missing
         start_x=labyrinth.start_x,
         start_y=labyrinth.start_y,
         created_at=datetime.utcnow()
@@ -89,5 +81,7 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
         'session_id': str(new_session.id),
         'seed': new_session.seed,
         'labyrinth_id': str(new_session.labyrinth_id),
-        'size': new_session.size
+        'size': new_session.size,
+        'start_x': new_session.start_x,
+        'start_y': new_session.start_y
     }
