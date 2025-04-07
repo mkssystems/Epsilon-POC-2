@@ -36,9 +36,12 @@ async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Se
 
     return {
         'message': 'Connected successfully',
-        'session_id': session.id,
-        'map_seed': session.seed,
-        'labyrinth_id': session.labyrinth_id
+        'session_id': str(session.id),
+        'map_seed': session.seed or 'N/A',
+        'labyrinth_id': str(session.labyrinth_id) if session.labyrinth_id else 'N/A',
+        'start_x': session.start_x,
+        'start_y': session.start_y,
+        'size': session.labyrinth.size if session.labyrinth else 'N/A'
     }
 
 @router.get('/api/game_sessions/{session_id}/clients')
