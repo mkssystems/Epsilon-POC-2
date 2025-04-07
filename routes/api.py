@@ -85,3 +85,14 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
         'start_x': new_session.start_x,
         'start_y': new_session.start_y
     }
+
+@router.post('/api/game_sessions/leave')
+async def leave_game_session(request: ClientJoinRequest, db: Session = Depends(get_db)):
+    existing_client = db.query(MobileClient).filter(MobileClient.client_id == request.client_id).first()
+    if not existing_client:
+        raise HTTPException(status_code=404, detail='Client not connected to any session')
+
+    db.delete(existing_client)
+    db.commit()
+
+    return {'message': 'Disconnected successfully'}
