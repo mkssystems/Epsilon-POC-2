@@ -69,7 +69,9 @@
   <script>
     async function generateLabyrinth(useSeed) {
       const size = document.getElementById("size").value;
-      const seed = useSeed ? document.getElementById("seed").value : "";
+      const seedInput = document.getElementById("seed").value;
+      const seed = useSeed && seedInput ? seedInput : undefined;
+
       const response = await fetch("/generate-labyrinth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,22 +102,24 @@
 
     async function createGameSession() {
       const size = document.getElementById("size").value;
-      const seed = document.getElementById("seed").value;
+      const seedInput = document.getElementById("seed").value;
+      const seed = seedInput ? seedInput : undefined;
+
       const response = await fetch("/api/game_sessions/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ size, seed })
-    });
-    if (!response.ok) return alert("Error creating game session!");
-    fetchGameSessions();
+      });
+      if (!response.ok) return alert("Error creating game session!");
+      fetchGameSessions();
     }
 
     async function fetchGameSessions() {
       const res = await fetch("/api/game_sessions");
-      const {sessions} = await res.json();
+      const { sessions } = await res.json();
       const tbody = document.getElementById("sessions-body");
       tbody.innerHTML = "";
-      for (const session of sessions) {
+      sessions.forEach(session => {
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${session.id}</td>
@@ -128,27 +132,16 @@
         `;
         tbody.appendChild(row);
         fetchConnectedClients(session.id);
-      }
-    }
-
-    async function destroyAllSessions() {
-      if (!confirm("Are you sure you want to destroy all sessions?")) return;
-      const res = await fetch('/destroy-all-sessions', { method: 'DELETE' });
-      if (!res.ok) alert("Failed to destroy sessions!");
-      fetchGameSessions();
+      });
     }
 
     async function fetchConnectedClients(sessionId) {
       const res = await fetch(`/api/game_sessions/${sessionId}/clients`);
       const cell = document.getElementById(`clients-${sessionId}`);
-      if (!res.ok) {
-        cell.innerHTML = "Error fetching clients.";
-        return;
-      }
       const data = await res.json();
       cell.innerHTML = data.clients.length ? data.clients.map(c => `
-          <div class="client-entry">Client ID: ${c.client_id}<br>Connected At: ${new Date(c.connected_at).toLocaleString()}</div>
-        `).join('') : "No clients connected.";
+        <div class="client-entry">Client ID: ${c.client_id}<br>Connected At: ${new Date(c.connected_at).toLocaleString()}</div>
+      `).join('') : "No clients connected.";
     }
 
     window.onload = fetchGameSessions;
