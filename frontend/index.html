@@ -55,6 +55,7 @@
         <tr>
           <th>Session ID</th>
           <th>Seed</th>
+          <th>Map Size</th>
           <th>Labyrinth ID</th>
           <th>Start Position (X, Y)</th>
           <th>Created At</th>
@@ -119,6 +120,7 @@
         row.innerHTML = `
           <td>${session.id}</td>
           <td>${session.seed}</td>
+          <td>${session.size}</td>
           <td>${session.labyrinth_id}</td>
           <td>(${session.start_x}, ${session.start_y})</td>
           <td>${new Date(session.created_at).toLocaleString()}</td>
