@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from models.game_session import GameSession
 from models.mobile_client import MobileClient
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
-from schemas import ClientJoinRequest
-from db.session import get_db  # This import only, remove the one from main.py
+from schemas import ClientJoinRequest, GameSessionCreateRequest
+from db.session import get_db
 
 router = APIRouter()
 
@@ -53,4 +53,23 @@ async def get_connected_clients(session_id: UUID, db: Session = Depends(get_db))
                 'connected_at': client.connected_at.isoformat()
             } for client in session.connected_clients
         ]
+    }
+
+@router.post('/api/game_sessions/create')
+async def create_game_session(request: GameSessionCreateRequest, db: Session = Depends(get_db)):
+    new_session = GameSession(
+        id=uuid4(),
+        seed=request.seed or str(uuid4()),
+        labyrinth_id=request.labyrinth_id,
+        created_at=datetime.utcnow()
+    )
+    db.add(new_session)
+    db.commit()
+    db.refresh(new_session)
+
+    return {
+        'message': 'Game session created successfully',
+        'session_id': new_session.id,
+        'seed': new_session.seed,
+        'labyrinth_id': new_session.labyrinth_id
     }
