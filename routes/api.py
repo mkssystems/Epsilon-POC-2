@@ -69,6 +69,7 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
         labyrinth_id=labyrinth.id,
         start_x=labyrinth.start_x,
         start_y=labyrinth.start_y,
+        size=request.size,
         created_at=datetime.utcnow()
     )
     db.add(new_session)
@@ -79,5 +80,6 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
         'message': 'Game session created successfully',
         'session_id': str(new_session.id),
         'seed': new_session.seed,
-        'labyrinth_id': str(new_session.labyrinth_id)
+        'labyrinth_id': str(new_session.labyrinth_id),
+        'size': new_session.size
     }
