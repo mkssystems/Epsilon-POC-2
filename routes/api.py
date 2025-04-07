@@ -13,20 +13,15 @@ router = APIRouter()
 @router.get('/api/game_sessions')
 async def get_game_sessions(db: Session = Depends(get_db)):
     sessions = db.query(GameSession).all()
-    return {
-        "sessions": [
-            {
-                "id": str(session.id),
-                "seed": session.seed,
-                "labyrinth_id": str(session.labyrinth_id) if session.labyrinth_id else 'N/A',
-                "size": session.size,
-                "start_x": session.start_x,
-                "start_y": session.start_y,
-                "created_at": session.created_at.isoformat()
-            }
-            for session in sessions
-        ]
-    }
+    return {"sessions": [{
+        'id': str(session.id),
+        'seed': session.seed,
+        'size': session.size,
+        'labyrinth_id': str(session.labyrinth_id),
+        'start_x': session.start_x,
+        'start_y': session.start_y,
+        'created_at': session.created_at.isoformat()
+    } for session in sessions]}
 
 @router.post('/api/game_sessions/{session_id}/join')
 async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Session = Depends(get_db)):
@@ -50,11 +45,26 @@ async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Se
     return {
         'message': 'Connected successfully',
         'session_id': str(session.id),
-        'map_seed': session.seed or 'N/A',
-        'labyrinth_id': str(session.labyrinth_id) if session.labyrinth_id else 'N/A',
+        'map_seed': session.seed,
+        'labyrinth_id': str(session.labyrinth_id),
         'start_x': session.start_x,
         'start_y': session.start_y,
-        'size': session.size if session.size else 'N/A'
+        'size': session.size
+    }
+
+@router.get('/api/game_sessions/{session_id}/clients')
+async def get_connected_clients(session_id: UUID, db: Session = Depends(get_db)):
+    session = db.query(GameSession).filter(GameSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail='Session not found')
+
+    return {
+        'clients': [
+            {
+                'client_id': client.client_id,
+                'connected_at': client.connected_at.isoformat()
+            } for client in session.connected_clients
+        ]
     }
 
 @router.post('/api/game_sessions/create')
@@ -65,9 +75,9 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
         id=uuid4(),
         seed=labyrinth.seed,
         labyrinth_id=labyrinth.id,
+        size=request.size,  # <-- Explicitly set the size
         start_x=labyrinth.start_x,
         start_y=labyrinth.start_y,
-        size=request.size,
         created_at=datetime.utcnow()
     )
     db.add(new_session)
