@@ -6,4 +6,4 @@ class ClientJoinRequest(BaseModel):
 
 class GameSessionCreateRequest(BaseModel):
     size: int                  # Explicitly required
-    seed: Optional[str] = None # Optional seed
+    
