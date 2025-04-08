@@ -9,7 +9,7 @@ from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from uuid import UUID
 import json
 import threading
-
+import pandas as pd
 
 from models.base import Base
 from models.game_session import GameSession
@@ -18,7 +18,7 @@ from models.player import Player
 from models.tile import Tile
 from models.game_entities import Base as EntityBase
 from db.init_data import load_data
-from db.session import get_db  # Use only this import for DB sessions
+from db.session import get_db
 
 from models.game_entities import Entity
 from models.equipment import Equipment
@@ -27,7 +27,6 @@ from models.specials import Special
 from state import session_readiness, lock
 
 from config import DATABASE_URL, init_db
-import pandas as pd
 
 # Import API router
 from routes.api import router as api_router
@@ -58,7 +57,6 @@ def startup():
 
         load_data(engine, df_entities, df_equipment, df_skills, df_specials)
 
-# Existing models and endpoint definitions remain unchanged here
 class GameSessionCreateRequest(BaseModel):
     size: int
     seed: Optional[str] = None
@@ -174,14 +172,12 @@ def destroy_all_sessions(db: Session = Depends(get_db)):
     db.commit()
     return {"detail": "All game sessions deleted"}
 
-# Include the routes from routes/api.py
+# WebSocket endpoint registration FIRST
+mount_websocket_routes(app)
+
+# Include API router SECOND
 app.include_router(api_router)
 
+# Mount static files LAST
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 app.mount("/tiles", StaticFiles(directory="frontend/tiles"), name="tiles")
-
-# === Clearly added new components below === #
-
-
-# WebSocket endpoint registration
-mount_websocket_routes(app)
