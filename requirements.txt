@@ -4,3 +4,4 @@ sqlalchemy==2.0.40
 psycopg2-binary==2.9.10
 pydantic==2.11.2
 pandas==2.2.2
+websockets==12.0
