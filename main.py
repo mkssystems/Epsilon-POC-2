@@ -10,6 +10,7 @@ from uuid import UUID
 import json
 import threading
 
+
 from models.base import Base
 from models.game_session import GameSession
 from models.labyrinth import Labyrinth
@@ -23,6 +24,7 @@ from models.game_entities import Entity
 from models.equipment import Equipment
 from models.skills import Skill
 from models.specials import Special
+from state import session_readiness, lock
 
 from config import DATABASE_URL, init_db
 import pandas as pd
@@ -180,9 +182,6 @@ app.mount("/tiles", StaticFiles(directory="frontend/tiles"), name="tiles")
 
 # === Clearly added new components below === #
 
-# In-memory readiness tracking
-session_readiness: Dict[str, Dict[str, bool]] = {}
-lock = threading.Lock()
 
 # WebSocket endpoint registration
 mount_websocket_routes(app)
