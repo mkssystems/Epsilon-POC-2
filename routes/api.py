@@ -36,6 +36,22 @@ async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Se
     db.commit()
     db.refresh(new_client)
 
+    # Explicitly register client in readiness tracking upon joining
+    with lock:
+        session_str_id = str(session_id)
+        if session_str_id not in session_readiness:
+            session_readiness[session_str_id] = {}
+
+        session_readiness[session_str_id][request.client_id] = False
+
+        # Immediately broadcast updated readiness state
+        players = [
+            PlayerStatus(client_id=cid, ready=ready)
+            for cid, ready in session_readiness[session_str_id].items()
+        ]
+        session_status = SessionStatus(players=players, all_ready=False)
+        broadcast_session_update(session_str_id, session_status.dict())
+
     return {
         'message': 'Connected successfully',
         'session_id': str(session.id),
@@ -118,8 +134,6 @@ async def get_client_state(client_id: str, db: Session = Depends(get_db)):
                 }
             }
     return {"client_id": client_id, "connected_session": None, "session_details": None}
-
-# === New Readiness Endpoints Below === #
 
 @router.post("/api/game_sessions/{session_id}/toggle_readiness", response_model=SessionStatus)
 async def toggle_readiness(session_id: str, payload: PlayerStatus):
