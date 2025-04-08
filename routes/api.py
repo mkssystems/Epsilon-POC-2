@@ -140,8 +140,9 @@ async def toggle_readiness(session_id: str, payload: PlayerStatus):
     with lock:
         if session_id not in session_readiness:
             session_readiness[session_id] = {}
-        current_status = session_readiness[session_id].get(payload.client_id, False)
-        session_readiness[session_id][payload.client_id] = not current_status
+
+        # Set readiness explicitly (clearly corrected)
+        session_readiness[session_id][payload.client_id] = payload.ready
 
         players = [
             PlayerStatus(client_id=cid, ready=ready)
