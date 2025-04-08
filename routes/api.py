@@ -4,9 +4,11 @@ from models.game_session import GameSession
 from models.mobile_client import MobileClient
 from uuid import UUID, uuid4
 from datetime import datetime
-from schemas import ClientJoinRequest, GameSessionCreateRequest
+from schemas import ClientJoinRequest, GameSessionCreateRequest, PlayerStatus, SessionStatus
 from db.session import get_db
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
+from main import session_readiness, lock
+from realtime import broadcast_session_update
 
 router = APIRouter()
 
@@ -97,7 +99,6 @@ async def leave_game_session(request: ClientJoinRequest, db: Session = Depends(g
 
     return {'message': 'Disconnected successfully'}
 
-# Clearly added new endpoint to check client's current session state
 @router.get("/api/game_sessions/client_state/{client_id}")
 async def get_client_state(client_id: str, db: Session = Depends(get_db)):
     client = db.query(MobileClient).filter(MobileClient.client_id == client_id).first()
@@ -117,3 +118,36 @@ async def get_client_state(client_id: str, db: Session = Depends(get_db)):
                 }
             }
     return {"client_id": client_id, "connected_session": None, "session_details": None}
+
+# === New Readiness Endpoints Below === #
+
+@router.post("/api/game_sessions/{session_id}/toggle_readiness", response_model=SessionStatus)
+async def toggle_readiness(session_id: str, payload: PlayerStatus):
+    with lock:
+        if session_id not in session_readiness:
+            session_readiness[session_id] = {}
+        current_status = session_readiness[session_id].get(payload.client_id, False)
+        session_readiness[session_id][payload.client_id] = not current_status
+
+        players = [
+            PlayerStatus(client_id=cid, ready=ready)
+            for cid, ready in session_readiness[session_id].items()
+        ]
+        all_ready = all(p.ready for p in players)
+        session_status = SessionStatus(players=players, all_ready=all_ready)
+
+        broadcast_session_update(session_id, session_status.dict())
+
+        return session_status
+
+@router.get("/api/game_sessions/{session_id}/status", response_model=SessionStatus)
+async def get_session_status(session_id: str):
+    with lock:
+        players = []
+        if session_id in session_readiness:
+            players = [
+                PlayerStatus(client_id=cid, ready=ready)
+                for cid, ready in session_readiness[session_id].items()
+            ]
+        all_ready = all(p.ready for p in players) if players else False
+        return SessionStatus(players=players, all_ready=all_ready)
