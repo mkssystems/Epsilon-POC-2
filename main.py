@@ -2,12 +2,13 @@ from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, sessionmaker
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
 from sqlalchemy import create_engine
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from uuid import UUID
 import json
+import threading
 
 from models.base import Base
 from models.game_session import GameSession
@@ -28,6 +29,9 @@ import pandas as pd
 
 # Import API router
 from routes.api import router as api_router
+
+# Import for real-time socket
+from realtime import mount_websocket_routes, broadcast_session_update
 
 app = FastAPI()
 
@@ -52,6 +56,7 @@ def startup():
 
         load_data(engine, df_entities, df_equipment, df_skills, df_specials)
 
+# Existing models and endpoint definitions remain unchanged here
 class GameSessionCreateRequest(BaseModel):
     size: int
     seed: Optional[str] = None
@@ -172,3 +177,12 @@ app.include_router(api_router)
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 app.mount("/tiles", StaticFiles(directory="frontend/tiles"), name="tiles")
+
+# === Clearly added new components below === #
+
+# In-memory readiness tracking
+session_readiness: Dict[str, Dict[str, bool]] = {}
+lock = threading.Lock()
+
+# WebSocket endpoint registration
+mount_websocket_routes(app)
