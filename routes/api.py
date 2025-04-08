@@ -96,3 +96,24 @@ async def leave_game_session(request: ClientJoinRequest, db: Session = Depends(g
     db.commit()
 
     return {'message': 'Disconnected successfully'}
+
+# Clearly added new endpoint to check client's current session state
+@router.get("/api/game_sessions/client_state/{client_id}")
+async def get_client_state(client_id: str, db: Session = Depends(get_db)):
+    client = db.query(MobileClient).filter(MobileClient.client_id == client_id).first()
+    if client and client.game_session_id:
+        session = db.query(GameSession).filter(GameSession.id == client.game_session_id).first()
+        if session:
+            return {
+                "client_id": client_id,
+                "connected_session": str(session.id),
+                "session_details": {
+                    "session_id": str(session.id),
+                    "labyrinth_id": str(session.labyrinth_id),
+                    "seed": session.seed,
+                    "size": session.size,
+                    "start_x": session.start_x,
+                    "start_y": session.start_y
+                }
+            }
+    return {"client_id": client_id, "connected_session": None, "session_details": None}
