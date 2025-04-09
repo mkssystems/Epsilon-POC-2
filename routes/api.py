@@ -50,7 +50,7 @@ async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Se
             for cid, ready in session_readiness[session_str_id].items()
         ]
         session_status = SessionStatus(players=players, all_ready=False)
-        broadcast_session_update(session_str_id, session_status.dict())
+        await broadcast_session_update(session_str_id, session_status.dict())  # <-- fix: added await explicitly
 
     return {
         'message': 'Connected successfully',
@@ -141,7 +141,6 @@ async def toggle_readiness(session_id: str, payload: PlayerStatus):
         if session_id not in session_readiness:
             session_readiness[session_id] = {}
 
-        # Set readiness explicitly (clearly corrected)
         session_readiness[session_id][payload.client_id] = payload.ready
 
         players = [
@@ -151,7 +150,7 @@ async def toggle_readiness(session_id: str, payload: PlayerStatus):
         all_ready = all(p.ready for p in players)
         session_status = SessionStatus(players=players, all_ready=all_ready)
 
-        broadcast_session_update(session_id, session_status.dict())
+        await broadcast_session_update(session_id, session_status.dict())  # <-- fix: added await explicitly
 
         return session_status
 
