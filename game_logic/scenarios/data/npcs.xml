@@ -1,0 +1,21 @@
+<!-- npcs.xml -->
+<npcs>
+    <npc id="npc_lt_hale">
+        <name>Lieutenant Hale</name>
+        <role>Guide</role>
+        <health>100</health>
+        <dialogue>
+            <line>Stay alert! This place gives me the creeps.</line>
+            <line>Keep moving—we can't afford to waste time here.</line>
+        </dialogue>
+    </npc>
+    <npc id="npc_engineer_jones">
+        <name>Engineer Jones</name>
+        <role>Support</role>
+        <health>80</health>
+        <dialogue>
+            <line>I'm picking up strange readings from the control panel.</line>
+            <line>If you need repairs, I'm your person.</line>
+        </dialogue>
+    </npc>
+</npcs>
