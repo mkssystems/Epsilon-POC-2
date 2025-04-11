@@ -1,0 +1,12 @@
+<!-- narrative_tile_corridor_EW.xml -->
+<tile_descriptions tile_id="tile_corridor_EW">
+    <variant id="v1">
+        You find yourself in a dimly lit east-west corridor. The walls echo your footsteps eerily.
+    </variant>
+    <variant id="v2">
+        A narrow corridor stretches east and west. The air feels thick, hinting at unseen dangers.
+    </variant>
+    <variant id="v3">
+        Flickering lights guide your path along the east-west passage, casting dancing shadows.
+    </variant>
+</tile_descriptions>
