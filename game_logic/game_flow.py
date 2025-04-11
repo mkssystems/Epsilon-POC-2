@@ -6,11 +6,12 @@ from .labyrinth.labyrinth_manager import LabyrinthManager
 from .labyrinth.entity_positions import EntityPositions
 from .narrative.narrative_manager import NarrativeManager
 from .visuals.visual_layers_manager import VisualLayersManager
+from .environment.environment_logic import EnvironmentLogic
 
 class GameFlowManager:
     """
     Explicitly manages the overall flow of the game, including initialization,
-    turn sequencing, action resolution, and scenario conclusion.
+    turn sequencing, action resolution, environmental effects, and scenario conclusion.
     """
 
     def __init__(self, session_id: str, labyrinth_id: str):
@@ -22,6 +23,7 @@ class GameFlowManager:
         self.entity_positions = EntityPositions(session_id, labyrinth_id)
         self.narrative_manager = NarrativeManager(session_id)
         self.visual_layers_manager = VisualLayersManager(session_id)
+        self.environment_logic = EnvironmentLogic(session_id)
 
     def initialize_game(self, scenario_id: str, seed: str, size: tuple, entities_initial_positions: Dict[str, Any]) -> None:
         labyrinth_structure = self.labyrinth_manager.create_labyrinth(seed, size)
@@ -29,9 +31,6 @@ class GameFlowManager:
             tile_id = entity_data["initial_tile_id"]
             entity_type = entity_data["entity_type"]
             self.entity_positions.track_entity_position(self.turn_number, entity_id, entity_type, tile_id)
-
-        initial_narrative = self.narrative_manager.generate_tile_narrative(tile_id, entity_id)
-        initial_visual = self.visual_layers_manager.generate_visual_layers(tile_id, [], [])
 
         self.logger.create_log_entry(
             turn_number=self.turn_number,
@@ -44,8 +43,6 @@ class GameFlowManager:
         )
 
         print(f"Game session {self.session_id} initialized explicitly for scenario {scenario_id}.")
-        print(f"Initial Narrative: {initial_narrative}")
-        print(f"Initial Visual Layers: {initial_visual}")
 
     def start_next_turn(self) -> None:
         self.turn_number += 1
@@ -57,7 +54,22 @@ class GameFlowManager:
             action_type="StartTurn",
             description=f"Starting turn {self.turn_number}"
         )
+
         print(f"Starting turn {self.turn_number} for session {self.session_id}")
+
+        # Explicitly apply environmental event at the start of each turn
+        event_details = self.environment_logic.generate_environmental_event()
+        self.environment_logic.apply_event_effects(event_details)
+
+        self.logger.create_log_entry(
+            turn_number=self.turn_number,
+            actor_type="environment",
+            actor_id="system",
+            action_phase="environment",
+            action_type=event_details["event_type"],
+            description=event_details["effect"]["effect_description"],
+            additional_data=event_details["effect"]
+        )
 
     def resolve_turn_actions(self) -> Dict[str, Any]:
         self.logger.create_log_entry(
@@ -71,15 +83,6 @@ class GameFlowManager:
         print(f"Resolving actions for turn {self.turn_number}")
         # Placeholder logic for action resolution
         return {"result": "Action resolution explicitly pending implementation."}
-
-    def generate_turn_narrative_and_visuals(self, tile_id: str, entity_id: str) -> Dict[str, Any]:
-        narrative = self.narrative_manager.generate_tile_narrative(tile_id, entity_id)
-        visuals = self.visual_layers_manager.generate_visual_layers(tile_id, [], [])
-        
-        print(f"Generated narrative explicitly for turn {self.turn_number}: {narrative}")
-        print(f"Generated visual layers explicitly for turn {self.turn_number}: {visuals}")
-        
-        return {"narrative": narrative, "visual_layers": visuals}
 
     def check_end_conditions(self) -> bool:
         end_conditions_met = False  # Placeholder logic
