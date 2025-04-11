@@ -4,6 +4,8 @@ from typing import Dict, Any
 from .log_manager import LogManager
 from .labyrinth.labyrinth_manager import LabyrinthManager
 from .labyrinth.entity_positions import EntityPositions
+from .narrative.narrative_manager import NarrativeManager
+from .visuals.visual_layers_manager import VisualLayersManager
 
 class GameFlowManager:
     """
@@ -18,19 +20,18 @@ class GameFlowManager:
         self.logger = LogManager(session_id)
         self.labyrinth_manager = LabyrinthManager(session_id, labyrinth_id)
         self.entity_positions = EntityPositions(session_id, labyrinth_id)
+        self.narrative_manager = NarrativeManager(session_id)
+        self.visual_layers_manager = VisualLayersManager(session_id)
 
     def initialize_game(self, scenario_id: str, seed: str, size: tuple, entities_initial_positions: Dict[str, Any]) -> None:
-        """
-        Explicitly initializes the game for Turn 0 based on the provided scenario.
-        """
-        # Generate and store the initial labyrinth structure
         labyrinth_structure = self.labyrinth_manager.create_labyrinth(seed, size)
-
-        # Place entities in their initial positions
         for entity_id, entity_data in entities_initial_positions.items():
             tile_id = entity_data["initial_tile_id"]
             entity_type = entity_data["entity_type"]
             self.entity_positions.track_entity_position(self.turn_number, entity_id, entity_type, tile_id)
+
+        initial_narrative = self.narrative_manager.generate_tile_narrative(tile_id, entity_id)
+        initial_visual = self.visual_layers_manager.generate_visual_layers(tile_id, [], [])
 
         self.logger.create_log_entry(
             turn_number=self.turn_number,
@@ -38,16 +39,15 @@ class GameFlowManager:
             actor_id="system",
             action_phase="initialization",
             action_type="Setup",
-            description=f"Game initialized with labyrinth {self.labyrinth_id} and scenario {scenario_id}",
+            description=f"Game initialized for scenario {scenario_id}",
             additional_data={"labyrinth_structure": labyrinth_structure}
         )
 
         print(f"Game session {self.session_id} initialized explicitly for scenario {scenario_id}.")
+        print(f"Initial Narrative: {initial_narrative}")
+        print(f"Initial Visual Layers: {initial_visual}")
 
     def start_next_turn(self) -> None:
-        """
-        Explicitly transitions to the next turn and manages turn setup.
-        """
         self.turn_number += 1
         self.logger.create_log_entry(
             turn_number=self.turn_number,
@@ -57,13 +57,9 @@ class GameFlowManager:
             action_type="StartTurn",
             description=f"Starting turn {self.turn_number}"
         )
-
         print(f"Starting turn {self.turn_number} for session {self.session_id}")
 
     def resolve_turn_actions(self) -> Dict[str, Any]:
-        """
-        Explicitly resolves all actions declared for the current turn.
-        """
         self.logger.create_log_entry(
             turn_number=self.turn_number,
             actor_type="backend",
@@ -73,12 +69,19 @@ class GameFlowManager:
             description=f"Resolving actions for turn {self.turn_number}"
         )
         print(f"Resolving actions for turn {self.turn_number}")
-        return {"result": "Action resolution logic explicitly pending implementation."}
+        # Placeholder logic for action resolution
+        return {"result": "Action resolution explicitly pending implementation."}
+
+    def generate_turn_narrative_and_visuals(self, tile_id: str, entity_id: str) -> Dict[str, Any]:
+        narrative = self.narrative_manager.generate_tile_narrative(tile_id, entity_id)
+        visuals = self.visual_layers_manager.generate_visual_layers(tile_id, [], [])
+        
+        print(f"Generated narrative explicitly for turn {self.turn_number}: {narrative}")
+        print(f"Generated visual layers explicitly for turn {self.turn_number}: {visuals}")
+        
+        return {"narrative": narrative, "visual_layers": visuals}
 
     def check_end_conditions(self) -> bool:
-        """
-        Explicitly checks whether the game should conclude based on current conditions.
-        """
         end_conditions_met = False  # Placeholder logic
         self.logger.create_log_entry(
             turn_number=self.turn_number,
@@ -92,9 +95,6 @@ class GameFlowManager:
         return end_conditions_met
 
     def conclude_game(self) -> Dict[str, Any]:
-        """
-        Explicitly handles game conclusion logic and scenario finalization.
-        """
         self.logger.create_log_entry(
             turn_number=self.turn_number,
             actor_type="backend",
