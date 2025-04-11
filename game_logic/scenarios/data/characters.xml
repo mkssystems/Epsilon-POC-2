@@ -1,0 +1,19 @@
+<!-- characters.xml -->
+<characters>
+    <character id="player_morgan_ashford">
+        <name>Morgan Ashford</name>
+        <health>100</health>
+        <skills>
+            <skill>Leadership</skill>
+            <skill>Combat Tactics</skill>
+        </skills>
+    </character>
+    <character id="player_blake_ryder">
+        <name>Blake Ryder</name>
+        <health>100</health>
+        <skills>
+            <skill>Stealth</skill>
+            <skill>Technical Expertise</skill>
+        </skills>
+    </character>
+</characters>
