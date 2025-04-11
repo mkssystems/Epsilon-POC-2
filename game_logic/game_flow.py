@@ -7,6 +7,11 @@ from .labyrinth.entity_positions import EntityPositions
 from .narrative.narrative_manager import NarrativeManager
 from .visuals.visual_layers_manager import VisualLayersManager
 from .environment.environment_logic import EnvironmentLogic
+from .actions.move import MoveAction
+from .actions.fight import FightAction
+from .actions.explore import ExploreAction
+from .actions.stay import StayAction
+from .actions.special import SpecialAction
 
 class GameFlowManager:
     """
@@ -41,7 +46,6 @@ class GameFlowManager:
             description=f"Game initialized for scenario {scenario_id}",
             additional_data={"labyrinth_structure": labyrinth_structure}
         )
-
         print(f"Game session {self.session_id} initialized explicitly for scenario {scenario_id}.")
 
     def start_next_turn(self) -> None:
@@ -55,9 +59,6 @@ class GameFlowManager:
             description=f"Starting turn {self.turn_number}"
         )
 
-        print(f"Starting turn {self.turn_number} for session {self.session_id}")
-
-        # Explicitly apply environmental event at the start of each turn
         event_details = self.environment_logic.generate_environmental_event()
         self.environment_logic.apply_event_effects(event_details)
 
@@ -71,18 +72,44 @@ class GameFlowManager:
             additional_data=event_details["effect"]
         )
 
-    def resolve_turn_actions(self) -> Dict[str, Any]:
-        self.logger.create_log_entry(
-            turn_number=self.turn_number,
-            actor_type="backend",
-            actor_id="system",
-            action_phase="resolution",
-            action_type="ResolveActions",
-            description=f"Resolving actions for turn {self.turn_number}"
-        )
-        print(f"Resolving actions for turn {self.turn_number}")
-        # Placeholder logic for action resolution
-        return {"result": "Action resolution explicitly pending implementation."}
+        print(f"Starting turn {self.turn_number} for session {self.session_id}")
+
+    def resolve_turn_actions(self, actions_to_resolve: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        results = {}
+        for entity_id, action_info in actions_to_resolve.items():
+            action_type = action_info["action_type"]
+            params = action_info["params"]
+
+            if action_type == "Move":
+                action = MoveAction(entity_id, params)
+            elif action_type == "Fight":
+                action = FightAction(entity_id, params)
+            elif action_type == "Explore":
+                action = ExploreAction(entity_id, params)
+            elif action_type == "Stay":
+                action = StayAction(entity_id, params)
+            elif action_type == "Special":
+                action = SpecialAction(entity_id, params)
+            else:
+                continue  # Unknown action type
+
+            result = action.execute()
+            narrative = action.generate_narrative()
+
+            self.logger.create_log_entry(
+                turn_number=self.turn_number,
+                actor_type="entity",
+                actor_id=entity_id,
+                action_phase="resolution",
+                action_type=action_type,
+                description=narrative,
+                additional_data=result
+            )
+
+            results[entity_id] = {"result": result, "narrative": narrative}
+
+        print(f"Actions resolved explicitly for turn {self.turn_number}: {results}")
+        return results
 
     def check_end_conditions(self) -> bool:
         end_conditions_met = False  # Placeholder logic
