@@ -1,0 +1,21 @@
+<!-- enemies.xml -->
+<enemies>
+    <enemy id="enemy_ai_1">
+        <name>AI Drone</name>
+        <health>50</health>
+        <damage>10</damage>
+        <abilities>
+            <ability>Laser Attack</ability>
+            <ability>Shield Generation</ability>
+        </abilities>
+    </enemy>
+    <enemy id="enemy_alien_1">
+        <name>Alien Intruder</name>
+        <health>80</health>
+        <damage>15</damage>
+        <abilities>
+            <ability>Claw Attack</ability>
+            <ability>Stealth Movement</ability>
+        </abilities>
+    </enemy>
+</enemies>
