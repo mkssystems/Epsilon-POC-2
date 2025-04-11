@@ -1,0 +1,23 @@
+<!-- narrative_environmental_effects.xml -->
+<environmental_effects>
+    <effect id="explosion">
+        <description>
+            A sudden explosion rattles the ship, shaking the corridors and scattering debris everywhere.
+        </description>
+    </effect>
+    <effect id="power_outage">
+        <description>
+            Lights flicker and fade, plunging the area into complete darkness, with only emergency lights dimly illuminating the corridors.
+        </description>
+    </effect>
+    <effect id="structural_damage">
+        <description>
+            The sound of tearing metal fills the air as structural supports fail, blocking certain passages.
+        </description>
+    </effect>
+    <effect id="no_event">
+        <description>
+            The atmosphere is tense yet quiet; nothing unusual occurs this time.
+        </description>
+    </effect>
+</environmental_effects>
