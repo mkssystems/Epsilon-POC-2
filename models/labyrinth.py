@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -14,6 +14,9 @@ class Labyrinth(Base):
     start_x = Column(Integer, nullable=False)
     start_y = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Explicitly added JSON field for detailed labyrinth structure
+    generated_tiles = Column(JSON, nullable=False)
 
     game_sessions = relationship(
         "GameSession",
