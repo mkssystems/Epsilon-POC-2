@@ -14,11 +14,14 @@ from .actions.stay import StayAction
 from .actions.special import SpecialAction
 from .entities.npc_logic import NPC
 from .entities.enemy_logic import Enemy
+from .utils.timers import ActionTimer
+from .utils.state_sync import StateSyncManager
 
 class GameFlowManager:
     """
     Explicitly manages the overall flow of the game, including initialization,
-    turn sequencing, action resolution, environmental effects, and scenario conclusion.
+    turn sequencing, action resolution, environmental effects, player inactivity,
+    reconnections, and scenario conclusion.
     """
 
     def __init__(self, session_id: str, labyrinth_id: str):
@@ -31,8 +34,67 @@ class GameFlowManager:
         self.narrative_manager = NarrativeManager(session_id)
         self.visual_layers_manager = VisualLayersManager(session_id)
         self.environment_logic = EnvironmentLogic(session_id)
-        self.npcs = {}  # Explicit storage for NPC objects
-        self.enemies = {}  # Explicit storage for Enemy objects
+        self.npcs = {}
+        self.enemies = {}
+        self.timers = {}
+        self.state_sync_manager = StateSyncManager(session_id)
+
+    def start_player_inactivity_timer(self, player_id: str, timeout_seconds: int):
+        """
+        Explicitly starts inactivity timer for a player.
+        """
+        timer = ActionTimer(timeout_seconds, self.apply_default_player_action, player_id)
+        timer.start_timer()
+        self.timers[player_id] = timer
+        print(f"Inactivity timer explicitly started for player '{player_id}'.")
+
+    def cancel_player_inactivity_timer(self, player_id: str):
+        """
+        Explicitly cancels inactivity timer when player acts.
+        """
+        if player_id in self.timers:
+            self.timers[player_id].cancel_timer()
+            del self.timers[player_id]
+            print(f"Inactivity timer explicitly cancelled for player '{player_id}'.")
+
+    def apply_default_player_action(self, player_id: str):
+        """
+        Explicitly applies the default 'Stay' action upon player inactivity.
+        """
+        action = StayAction(player_id)
+        result = action.execute()
+        narrative = action.generate_narrative()
+        self.logger.create_log_entry(
+            turn_number=self.turn_number,
+            actor_type="player",
+            actor_id=player_id,
+            action_phase="resolution",
+            action_type="Stay",
+            description=narrative,
+            additional_data=result
+        )
+        print(f"Default action explicitly applied for inactive player '{player_id}'.")
+
+    def handle_player_reconnection(self, player_id: str) -> Dict[str, Any]:
+        """
+        Explicitly handles player reconnection and provides game state synchronization.
+        """
+        state_data = self.state_sync_manager.synchronize_state(player_id)
+        self.logger.create_log_entry(
+            turn_number=self.turn_number,
+            actor_type="player",
+            actor_id=player_id,
+            action_phase="reconnection",
+            action_type="StateSync",
+            description=f"Player '{player_id}' reconnected and synchronized.",
+            additional_data=state_data
+        )
+        print(f"Player '{player_id}' explicitly reconnected and synchronized.")
+        return state_data
+
+    # (Keep all previously integrated methods unchanged here...)
+
+
 
     def initialize_game(self, scenario_id: str, seed: str, size: tuple, entities_initial_positions: Dict[str, Any]) -> None:
         labyrinth_structure = self.labyrinth_manager.create_labyrinth(seed, size)
