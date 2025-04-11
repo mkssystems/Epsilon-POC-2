@@ -1,0 +1,18 @@
+<!-- narrative_characters.xml -->
+<characters>
+    <character id="player_morgan_ashford">
+        <description>
+            Captain Morgan Ashford stands confidently, her piercing gaze assessing the surroundings with practiced precision.
+        </description>
+    </character>
+    <character id="player_blake_ryder">
+        <description>
+            Blake Ryder, cautious yet determined, moves methodically, each step calculated and silent.
+        </description>
+    </character>
+    <character id="npc_lt_hale">
+        <description>
+            Lieutenant Hale observes the situation calmly, his presence reassuring to the crew.
+        </description>
+    </character>
+</characters>
