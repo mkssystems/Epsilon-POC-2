@@ -1,0 +1,20 @@
+<!-- objects.xml -->
+<objects>
+    <object id="obj_ancient_artifact">
+        <name>Ancient Artifact</name>
+        <description>A mysterious relic emanating a faint, unsettling glow.</description>
+        <interaction>Collectible</interaction>
+    </object>
+    <object id="obj_medkit">
+        <name>Medical Kit</name>
+        <description>A basic medkit containing supplies for treating injuries.</description>
+        <interaction>Usable</interaction>
+        <effect>Restores 25 health points.</effect>
+    </object>
+    <object id="obj_energy_cell">
+        <name>Energy Cell</name>
+        <description>A portable energy cell, used to restore power to equipment.</description>
+        <interaction>Usable</interaction>
+        <effect>Restores power to specific devices.</effect>
+    </object>
+</objects>
