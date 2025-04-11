@@ -12,6 +12,8 @@ from .actions.fight import FightAction
 from .actions.explore import ExploreAction
 from .actions.stay import StayAction
 from .actions.special import SpecialAction
+from .entities.npc_logic import NPC
+from .entities.enemy_logic import Enemy
 
 class GameFlowManager:
     """
@@ -29,6 +31,8 @@ class GameFlowManager:
         self.narrative_manager = NarrativeManager(session_id)
         self.visual_layers_manager = VisualLayersManager(session_id)
         self.environment_logic = EnvironmentLogic(session_id)
+        self.npcs = {}  # Explicit storage for NPC objects
+        self.enemies = {}  # Explicit storage for Enemy objects
 
     def initialize_game(self, scenario_id: str, seed: str, size: tuple, entities_initial_positions: Dict[str, Any]) -> None:
         labyrinth_structure = self.labyrinth_manager.create_labyrinth(seed, size)
@@ -36,6 +40,11 @@ class GameFlowManager:
             tile_id = entity_data["initial_tile_id"]
             entity_type = entity_data["entity_type"]
             self.entity_positions.track_entity_position(self.turn_number, entity_id, entity_type, tile_id)
+
+            if entity_type == "NPC":
+                self.npcs[entity_id] = NPC(entity_id, entity_data["name"], tile_id)
+            elif entity_type == "Enemy":
+                self.enemies[entity_id] = Enemy(entity_id, entity_data["name"], tile_id)
 
         self.logger.create_log_entry(
             turn_number=self.turn_number,
@@ -46,6 +55,7 @@ class GameFlowManager:
             description=f"Game initialized for scenario {scenario_id}",
             additional_data={"labyrinth_structure": labyrinth_structure}
         )
+
         print(f"Game session {self.session_id} initialized explicitly for scenario {scenario_id}.")
 
     def start_next_turn(self) -> None:
@@ -74,11 +84,25 @@ class GameFlowManager:
 
         print(f"Starting turn {self.turn_number} for session {self.session_id}")
 
+    def collect_entity_actions(self, player_positions: Dict[str, str]) -> Dict[str, Any]:
+        actions_to_resolve = {}
+
+        for npc_id, npc in self.npcs.items():
+            action_decision = npc.decide_next_action()
+            actions_to_resolve[npc_id] = action_decision
+
+        for enemy_id, enemy in self.enemies.items():
+            action_decision = enemy.decide_next_action(player_positions)
+            actions_to_resolve[enemy_id] = action_decision
+
+        print(f"Collected entity actions explicitly for turn {self.turn_number}: {actions_to_resolve}")
+        return actions_to_resolve
+
     def resolve_turn_actions(self, actions_to_resolve: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         results = {}
         for entity_id, action_info in actions_to_resolve.items():
-            action_type = action_info["action_type"]
-            params = action_info["params"]
+            action_type = action_info["action"]
+            params = action_info.get("params", {})
 
             if action_type == "Move":
                 action = MoveAction(entity_id, params)
