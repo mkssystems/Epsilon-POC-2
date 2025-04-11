@@ -1,0 +1,12 @@
+<!-- narrative_move.xml -->
+<move_descriptions>
+    <description id="move_v1">
+        You proceed cautiously, your footsteps echoing softly as you advance.
+    </description>
+    <description id="move_v2">
+        With deliberate steps, you move forward, carefully scanning your surroundings.
+    </description>
+    <description id="move_v3">
+        Quickly yet quietly, you traverse the corridor, senses alert to any sudden movement.
+    </description>
+</move_descriptions>
