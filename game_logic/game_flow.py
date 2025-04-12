@@ -92,9 +92,7 @@ class GameFlowManager:
         print(f"Player '{player_id}' explicitly reconnected and synchronized.")
         return state_data
 
-    # (Keep all previously integrated methods unchanged here...)
-
-
+   
 
     def initialize_game(self, scenario_id: str, seed: str, size: tuple, entities_initial_positions: Dict[str, Any]) -> None:
         labyrinth_structure = self.labyrinth_manager.create_labyrinth(seed, size)
@@ -221,3 +219,30 @@ class GameFlowManager:
         )
         print(f"Concluding game session {self.session_id}")
         return {"outcome": "Game conclusion logic explicitly pending implementation."}
+
+    def confirm_game_start(session_id):
+        # Check session existence
+        session = scenario_manager.get_game_session(session_id)
+        if not session:
+            log_manager.log_event(session_id, None, "GameStart", "validation",
+                                  "Game session validation failed - session not found.")
+            raise Exception("Game session not found. Cannot start the game.")
+    
+        # Check labyrinth existence
+        labyrinth = labyrinth_manager.get_existing_labyrinth(session.labyrinth_id)
+        if not labyrinth:
+            log_manager.log_event(session_id, None, "GameStart", "validation",
+                                  "Labyrinth validation failed - labyrinth structure not found.")
+            raise Exception("Labyrinth not found or improperly configured.")
+    
+        # Confirm session readiness (e.g., state should be 'lobby_ready')
+        if session.state != "lobby_ready":
+            log_manager.log_event(session_id, None, "GameStart", "validation",
+                                  f"Invalid session state: {session.state}")
+            raise Exception(f"Session state invalid: {session.state}")
+    
+        # All checks explicitly passed
+        log_manager.log_event(session_id, None, "GameStart", "validation",
+                              "Existing session and labyrinth validated successfully.")
+        return session, labyrinth
+
