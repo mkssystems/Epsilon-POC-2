@@ -46,13 +46,21 @@ class NarrativeManager:
         print(f"Entity descriptions explicitly generated for tile {tile_id}: {entity_description}")
         return entity_description
 
-    def generate_tile_narrative(self, tile_id: str, player_id: str) -> str:
-        """
-        Explicitly combines tile and entity narratives into a full description.
-        """
+   def generate_intro_narratives_for_players(self, scenario_id: str, player_positions: Dict[str, str]) -> Dict[str, str]:
+    """
+    Explicitly generates personalized intro narratives for each player.
+    """
+    player_narratives = {}
+    intro_text = self.select_random_intro_variant(scenario_id)  # ensure this function exists or implement it
+
+    for player_id, tile_id in player_positions.items():
         tile_description = self.select_tile_variant(tile_id)
         entity_description = self.describe_entities_on_tile(tile_id, exclude_entity_id=player_id)
-        
-        full_narrative = f"{tile_description} {entity_description}".strip()
-        print(f"Full narrative explicitly generated: {full_narrative}")
-        return full_narrative
+        full_narrative = f"{intro_text} {tile_description}"
+        if entity_description:
+            full_narrative += f" {entity_description}"
+
+        player_narratives[player_id] = full_narrative.strip()
+        print(f"Explicitly generated intro narrative for player {player_id}: {player_narratives[player_id]}")
+
+    return player_narratives
