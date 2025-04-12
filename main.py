@@ -34,7 +34,7 @@ def startup():
     init_db()
 
     if FORCE_REINIT_DB:
-        EntityBase.metadata.drop_all(bind=engine)
+        EntityBase.metadata.drop_all(bind=engine, cascade=True)
         EntityBase.metadata.create_all(bind=engine)
 
         df_entities = pd.read_csv("assets/seed/entities.csv")
