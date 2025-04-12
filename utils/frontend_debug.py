@@ -6,7 +6,10 @@ from db.session import get_db
 
 frontend_router = APIRouter()
 
+@app.post("/generate-labyrinth", response_model=LabyrinthResponse)
+
 @frontend_router.delete("/destroy-all-sessions")
+
 def destroy_all_sessions(db: Session = Depends(get_db)):
     db.query(GameSession).delete()
     db.commit()
@@ -60,6 +63,13 @@ def generate_labyrinth_visual(request: GenerateLabyrinthRequest, db: Session = D
         tiles=tiles_data
     )
 
+def parse_directions(open_directions):
+    if isinstance(open_directions, str):
+        try:
+            return json.loads(open_directions)
+        except:
+            return [open_directions]
+    return open_directions
 
 # Mount frontend HTML and tile assets
 frontend_router.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
