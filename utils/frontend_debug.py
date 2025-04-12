@@ -1,7 +1,16 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
+from models.game_session import GameSession
+from db.session import get_db
 
 frontend_router = APIRouter()
+
+@frontend_router.delete("/destroy-all-sessions")
+def destroy_all_sessions(db: Session = Depends(get_db)):
+    db.query(GameSession).delete()
+    db.commit()
+    return {"detail": "All game sessions deleted"}
 
 def get_image_name(tile_type, directions):
     directions = sorted(directions)
