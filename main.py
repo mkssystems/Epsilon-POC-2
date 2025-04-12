@@ -125,12 +125,6 @@ def create_game_session(request: GameSessionCreateRequest, db: Session = Depends
 
 @app.post("/generate-labyrinth", response_model=LabyrinthResponse)
 
-@app.delete("/destroy-all-sessions")
-def destroy_all_sessions(db: Session = Depends(get_db)):
-    db.query(GameSession).delete()
-    db.commit()
-    return {"detail": "All game sessions deleted"}
-
 # WebSocket endpoint registration FIRST
 mount_websocket_routes(app)
 
