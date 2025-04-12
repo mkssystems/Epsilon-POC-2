@@ -5,6 +5,8 @@ from typing import Dict, Any
 from fastapi.responses import JSONResponse
 from uuid import UUID
 from game_logic import game_flow, entity_positions, narrative_manager, visual_layers_manager
+from narrative import narrative_manager
+from visuals import visual_layers_manager
 
 router = APIRouter(prefix="/game", tags=["game"])
 
@@ -52,8 +54,8 @@ async def get_visual_layers(session_id: str) -> Dict[str, Any]:
 async def confirm_start(session_id: UUID):
     try:
         session, labyrinth = game_flow.confirm_game_start(session_id)
-        
-        # Fetch initial positions explicitly for all players
+
+        # Explicitly get initial positions for all players
         player_positions = entity_positions.get_initial_player_positions(session_id, labyrinth.labyrinth_id)
 
         # Explicitly generate player-specific narratives
@@ -62,19 +64,19 @@ async def confirm_start(session_id: UUID):
             session.scenario_id, player_positions
         )
 
-        # Explicitly generate visual instructions per player (implement accordingly)
+        # Explicitly generate visual instructions per player
         visual_instructions = visual_layers_manager.prepare_initial_visual_instructions(
             session_id, session.scenario_id, player_positions
         )
 
-        # Explicit response containing individualized narratives and visuals
+        # Explicit structured response
         response_data = {
             "status": "validated",
             "details": "Game session and labyrinth validated successfully.",
             "narratives": intro_narratives,
             "visual_instructions": visual_instructions
         }
-        return response_data
+        return JSONResponse(status_code=200, content=response_data)
 
     except Exception as e:
         return JSONResponse(status_code=400, content={"status": "error", "details": str(e)})
