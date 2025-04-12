@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from uuid import UUID
 import pandas as pd
-
+from sqlalchemy import text
 from models.game_session import GameSession
 from models.game_entities import Base as EntityBase
 from db.init_data import load_data
@@ -36,9 +36,11 @@ def startup():
     if FORCE_REINIT_DB:
         print("⚠️ Reinitializing the database from scratch...")
 
+        # Correct execution of raw SQL commands
         with engine.connect() as connection:
             trans = connection.begin()
-            connection.execute('DROP SCHEMA public CASCADE; CREATE SCHEMA public;')
+            connection.execute(text('DROP SCHEMA public CASCADE;'))
+            connection.execute(text('CREATE SCHEMA public;'))
             trans.commit()
         
         EntityBase.metadata.create_all(bind=engine)
