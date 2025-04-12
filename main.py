@@ -38,7 +38,7 @@ from utils.frontend_debug import frontend_router
 
 app = FastAPI()
 
-app.include_router(frontend_router)
+app.include_router(frontend_router, prefix="/debug")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
@@ -119,3 +119,5 @@ mount_websocket_routes(app)
 # Include API router SECOND
 app.include_router(api_router)
 
+# Include Frontend Debug router with prefix "/debug"
+app.include_router(frontend_router, prefix="/debug")
