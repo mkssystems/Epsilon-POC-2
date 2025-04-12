@@ -35,10 +35,10 @@ from realtime import mount_websocket_routes, broadcast_session_update
 
 # Import html 'frontend' debugger
 from utils.frontend_debug import frontend_router
-app.include_router(frontend_router)
-
 
 app = FastAPI()
+
+app.include_router(frontend_router)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
@@ -93,16 +93,6 @@ class LabyrinthResponse(BaseModel):
     start_y: int
     tiles: List[LabyrinthTile]
 
-def parse_directions(open_directions):
-    if isinstance(open_directions, str):
-        try:
-            return json.loads(open_directions)
-        except:
-            return [open_directions]
-    return open_directions
-
-
-
 @app.get("/game-sessions", response_model=List[GameSessionResponse])
 def list_game_sessions(db: Session = Depends(get_db)):
     return db.query(GameSession).all()
@@ -122,8 +112,6 @@ def create_game_session(request: GameSessionCreateRequest, db: Session = Depends
     db.refresh(game_session)
 
     return game_session
-
-@app.post("/generate-labyrinth", response_model=LabyrinthResponse)
 
 # WebSocket endpoint registration FIRST
 mount_websocket_routes(app)
