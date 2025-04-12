@@ -44,3 +44,12 @@ async def get_visual_layers(session_id: str) -> Dict[str, Any]:
     """
     # Placeholder implementation explicitly for visual layering instructions
     return {"visual_layers": "Visual layering instructions to be implemented explicitly."}
+
+@app.post("/game/{session_id}/confirm_start")
+async def confirm_start(session_id: UUID):
+    try:
+        session, labyrinth = game_flow.confirm_game_start(session_id)
+        return {"status": "validated", "details": "Game session and labyrinth validated successfully."}
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"status": "error", "details": str(e)})
+
