@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Depends
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, sessionmaker
 from pydantic import BaseModel
 from typing import List, Optional, Dict
@@ -33,6 +32,11 @@ from routes.api import router as api_router
 
 # Import for real-time socket
 from realtime import mount_websocket_routes, broadcast_session_update
+
+# Import html 'frontend' debugger
+from utils.frontend_debug import frontend_router
+app.include_router(frontend_router)
+
 
 app = FastAPI()
 
@@ -178,6 +182,3 @@ mount_websocket_routes(app)
 # Include API router SECOND
 app.include_router(api_router)
 
-# Mount static files LAST
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
-app.mount("/tiles", StaticFiles(directory="frontend/tiles"), name="tiles")
