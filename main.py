@@ -1,44 +1,28 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session, sessionmaker
 from pydantic import BaseModel
-from typing import List, Optional, Dict
+from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import create_engine
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from uuid import UUID
-import json
-import threading
 import pandas as pd
 
-from models.base import Base
 from models.game_session import GameSession
-from models.labyrinth import Labyrinth
-from models.player import Player
-from models.tile import Tile
 from models.game_entities import Base as EntityBase
 from db.init_data import load_data
 from db.session import get_db
-
-from models.game_entities import Entity
-from models.equipment import Equipment
-from models.skills import Skill
-from models.specials import Special
-from state import session_readiness, lock
-
 from config import DATABASE_URL, init_db
-
-# Import API router
+from realtime import mount_websocket_routes
 from routes.api import router as api_router
-
-# Import for real-time socket
-from realtime import mount_websocket_routes, broadcast_session_update
-
-# Import html 'frontend' debugger
 from utils.frontend_debug import frontend_router
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
-app.include_router(frontend_router, prefix="/debug")
+app.include_router(frontend_router, prefix="/debug")  # (remove duplicate!)
+mount_websocket_routes(app)
+app.include_router(api_router)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
@@ -50,7 +34,6 @@ def startup():
     init_db()
 
     if FORCE_REINIT_DB:
-        print("⚠️ Reinitializing the database from scratch...")
         EntityBase.metadata.drop_all(bind=engine)
         EntityBase.metadata.create_all(bind=engine)
 
@@ -76,23 +59,6 @@ class GameSessionResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class GenerateLabyrinthRequest(BaseModel):
-    size: int
-    seed: Optional[str] = None
-
-class LabyrinthTile(BaseModel):
-    x: int
-    y: int
-    type: str
-    open_directions: List[str]
-    image: str
-
-class LabyrinthResponse(BaseModel):
-    seed: str
-    start_x: int
-    start_y: int
-    tiles: List[LabyrinthTile]
-
 @app.get("/game-sessions", response_model=List[GameSessionResponse])
 def list_game_sessions(db: Session = Depends(get_db)):
     return db.query(GameSession).all()
@@ -113,11 +79,6 @@ def create_game_session(request: GameSessionCreateRequest, db: Session = Depends
 
     return game_session
 
-# WebSocket endpoint registration FIRST
-mount_websocket_routes(app)
-
-# Include API router SECOND
-app.include_router(api_router)
-
-# Include Frontend Debug router with prefix "/debug"
-app.include_router(frontend_router, prefix="/debug")
+# Mount frontend directly here (fix)
+app.mount("/debug", StaticFiles(directory="frontend", html=True), name="frontend")
+app.mount("/debug/tiles", StaticFiles(directory="frontend/tiles"), name="tiles")
