@@ -25,7 +25,8 @@
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { padding: 8px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
     th { background-color: #4CAF50; color: white; }
-    .client-entry { margin-bottom: 5px; }
+    .client-entry { margin-left: 15px; padding: 3px; }
+    .subrow { background-color: #fafafa; font-size: 0.9em; }
   </style>
 </head>
 <body>
@@ -56,12 +57,13 @@
         <tr>
           <th>Session ID</th>
           <th>Creator</th>
+          <!--
           <th>Scenario</th>
           <th>Difficulty</th>
+          -->
           <th>Map Size</th>
           <th>Max Players</th>
           <th>Created At</th>
-          <th>Connected Mobile Clients</th>
         </tr>
       </thead>
       <tbody id="sessions-body"></tbody>
@@ -112,25 +114,40 @@
         row.innerHTML = `
           <td>${session.id}</td>
           <td>${session.creator_client_id}</td>
+          <!--
           <td>${session.scenario_name}</td>
           <td>${session.difficulty}</td>
+          -->
           <td>${session.size}</td>
           <td>${session.max_players}</td>
           <td>${new Date(session.created_at).toLocaleString()}</td>
-          <td id="clients-${session.id}">Loading...</td>
         `;
         tbody.appendChild(row);
-        fetchConnectedClients(session.id);
+        fetchConnectedClients(session.id, tbody);
       });
     }
 
-    async function fetchConnectedClients(sessionId) {
+    async function fetchConnectedClients(sessionId, tbody) {
       const res = await fetch(`/api/game_sessions/${sessionId}/clients`);
-      const cell = document.getElementById(`clients-${sessionId}`);
       const data = await res.json();
-      cell.innerHTML = data.clients.length ? data.clients.map(c => `
-        <div class="client-entry">Client ID: ${c.client_id}<br>Connected At: ${new Date(c.connected_at).toLocaleString()}</div>
-      `).join('') : "No clients connected.";
+      const subrow = document.createElement('tr');
+      subrow.className = 'subrow';
+      subrow.innerHTML = `
+        <td colspan="5">
+          <strong>Connected Mobile Clients:</strong><br>
+          ${
+            data.clients.length 
+              ? data.clients.map((c, idx) => `
+                <div class="client-entry">
+                  ${idx + 1}. Client ID: ${c.client_id}, 
+                  Connected At: ${new Date(c.connected_at).toLocaleString()}
+                </div>`
+              ).join('') 
+              : "No clients connected."
+          }
+        </td>
+      `;
+      tbody.appendChild(subrow);
     }
 
     async function destroyAllSessions() {
