@@ -64,6 +64,7 @@
           <th>Map Size</th>
           <th>Max Players</th>
           <th>Created At</th>
+          <th>Connected Clients</th>
         </tr>
       </thead>
       <tbody id="sessions-body"></tbody>
@@ -109,45 +110,21 @@
       const { sessions } = await res.json();
       const tbody = document.getElementById("sessions-body");
       tbody.innerHTML = "";
-      sessions.forEach(session => {
+      sessions.forEach(async session => {
+        const resClients = await fetch(`/api/game_sessions/${session.id}/clients`);
+        const clientsData = await resClients.json();
+        const clientsList = clientsData.clients.map((c, idx) => `<div class="client-entry">${idx + 1}. ID: ${c.client_id}, Connected: ${new Date(c.connected_at).toLocaleString()}</div>`).join('') || 'No clients connected';
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${session.id}</td>
           <td>${session.creator_client_id}</td>
-          <!--
-          <td>${session.scenario_name}</td>
-          <td>${session.difficulty}</td>
-          -->
           <td>${session.size}</td>
           <td>${session.max_players}</td>
           <td>${new Date(session.created_at).toLocaleString()}</td>
+          <td>${clientsList}</td>
         `;
         tbody.appendChild(row);
-        fetchConnectedClients(session.id, tbody);
       });
-    }
-
-    async function fetchConnectedClients(sessionId, tbody) {
-      const res = await fetch(`/api/game_sessions/${sessionId}/clients`);
-      const data = await res.json();
-      const subrow = document.createElement('tr');
-      subrow.className = 'subrow';
-      subrow.innerHTML = `
-        <td colspan="5">
-          <strong>Connected Mobile Clients:</strong><br>
-          ${
-            data.clients.length 
-              ? data.clients.map((c, idx) => `
-                <div class="client-entry">
-                  ${idx + 1}. Client ID: ${c.client_id}, 
-                  Connected At: ${new Date(c.connected_at).toLocaleString()}
-                </div>`
-              ).join('') 
-              : "No clients connected."
-          }
-        </td>
-      `;
-      tbody.appendChild(subrow);
     }
 
     async function destroyAllSessions() {
