@@ -133,11 +133,15 @@ async def get_client_state(client_id: str, db: Session = Depends(get_db)):
                     "labyrinth_id": str(session.labyrinth_id),
                     "seed": session.seed,
                     "size": session.size,
-                    "start_x": session.start_x,
-                    "start_y": session.start_y
+                    "creator_client_id": session.creator_client_id,
+                    "scenario_name": session.scenario_name,
+                    "difficulty": session.difficulty,
+                    "max_players": session.max_players,
+                    "created_at": session.created_at.isoformat()
                 }
             }
     return {"client_id": client_id, "connected_session": None, "session_details": None}
+
 
 @router.post("/api/game_sessions/{session_id}/toggle_readiness", response_model=SessionStatus)
 async def toggle_readiness(session_id: str, payload: PlayerStatus):
