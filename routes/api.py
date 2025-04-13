@@ -117,8 +117,25 @@ async def leave_game_session(request: ClientJoinRequest, db: Session = Depends(g
     if not existing_client:
         raise HTTPException(status_code=404, detail='Client not connected to any session')
 
+    session_id = str(existing_client.game_session_id)
+
+    # Explicitly remove player from DB
     db.delete(existing_client)
     db.commit()
+
+    # Explicitly remove player from session readiness tracking and broadcast state
+    with lock:
+        if session_id in session_readiness and request.client_id in session_readiness[session_id]:
+            del session_readiness[session_id][request.client_id]
+
+        players = [
+            PlayerStatus(client_id=cid, ready=ready)
+            for cid, ready in session_readiness.get(session_id, {}).items()
+        ]
+        all_ready = all(player.ready for player in players) if players else False
+
+        session_status = SessionStatus(players=players, all_ready=all_ready)
+        await broadcast_session_update(session_id, session_status.dict())
 
     return {'message': 'Disconnected successfully'}
 
