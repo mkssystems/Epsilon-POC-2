@@ -188,3 +188,9 @@ async def destroy_all_sessions(db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get('/api/game_sessions/user/{client_id}')
+async def get_user_game_sessions(client_id: str, db: Session = Depends(get_db)):
+    sessions = db.query(GameSession).filter(GameSession.creator_client_id == client_id).all()
+    return {"sessions": sessions}
+
+
