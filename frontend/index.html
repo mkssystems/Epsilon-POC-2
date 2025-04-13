@@ -20,6 +20,8 @@
     input, button { margin: 5px; padding: 6px; border-radius: 3px; border: 1px solid #ccc; }
     button { background-color: #4CAF50; color: white; cursor: pointer; border: none; }
     button:hover { background-color: #45a049; }
+    .danger { background-color: #f44336; }
+    .danger:hover { background-color: #e53935; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { padding: 8px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
     th { background-color: #4CAF50; color: white; }
@@ -46,18 +48,18 @@
 
   <div class="sessions">
     <h2>Game Sessions</h2>
-    <button onclick="createGameSession()">Create Game Session</button>
     <button onclick="fetchGameSessions()">Refresh Sessions List</button>
-    <button onclick="destroyAllSessions()">Destroy All Sessions</button>
+    <button class="danger" onclick="destroyAllSessions()">Destroy All Sessions</button>
 
     <table id="sessions-table">
       <thead>
         <tr>
           <th>Session ID</th>
-          <th>Seed</th>
+          <th>Creator</th>
+          <th>Scenario</th>
+          <th>Difficulty</th>
           <th>Map Size</th>
-          <th>Labyrinth ID</th>
-          <th>Start Position (X, Y)</th>
+          <th>Max Players</th>
           <th>Created At</th>
           <th>Connected Mobile Clients</th>
         </tr>
@@ -100,20 +102,6 @@
       }
     }
 
-    async function createGameSession() {
-      const size = document.getElementById("size").value;
-      const seedInput = document.getElementById("seed").value;
-      const seed = seedInput ? seedInput : undefined;
-
-      const response = await fetch("/api/game_sessions/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ size, seed })
-      });
-      if (!response.ok) return alert("Error creating game session!");
-      fetchGameSessions();
-    }
-
     async function fetchGameSessions() {
       const res = await fetch("/api/game_sessions");
       const { sessions } = await res.json();
@@ -123,10 +111,11 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${session.id}</td>
-          <td>${session.seed}</td>
+          <td>${session.creator_client_id}</td>
+          <td>${session.scenario_name}</td>
+          <td>${session.difficulty}</td>
           <td>${session.size}</td>
-          <td>${session.labyrinth_id}</td>
-          <td>(${session.start_x}, ${session.start_y})</td>
+          <td>${session.max_players}</td>
           <td>${new Date(session.created_at).toLocaleString()}</td>
           <td id="clients-${session.id}">Loading...</td>
         `;
@@ -142,6 +131,13 @@
       cell.innerHTML = data.clients.length ? data.clients.map(c => `
         <div class="client-entry">Client ID: ${c.client_id}<br>Connected At: ${new Date(c.connected_at).toLocaleString()}</div>
       `).join('') : "No clients connected.";
+    }
+
+    async function destroyAllSessions() {
+      if (!confirm('Are you sure you want to destroy all sessions?')) return;
+      const res = await fetch("/api/game_sessions/destroy_all", { method: "DELETE" });
+      if (!res.ok) return alert("Failed to destroy sessions.");
+      fetchGameSessions();
     }
 
     window.onload = fetchGameSessions;
