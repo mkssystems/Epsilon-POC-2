@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang=\"en\">
+<html lang="en">
 <head>
-  <meta charset=\"UTF-8\" />
-  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Epsilon-POC-Playground</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background-color: #f7f7f7; }
@@ -32,67 +32,71 @@
 <body>
   <h1>Epsilon-POC-Playground</h1>
 
-  <div class=\"controls\">
+  <div class="controls">
     <label>Map Size (4-10):</label>
-    <input type=\"number\" id=\"size\" min=\"4\" max=\"10\" value=\"7\">
+    <input type="number" id="size" min="4" max="10" value="7">
     <label>Seed (optional):</label>
-    <input type=\"text\" id=\"seed\">
+    <input type="text" id="seed">
   </div>
 
-  <div class=\"actions\">
-    <button onclick=\"generateLabyrinth(false)\">Generate Random Map</button>
-    <button onclick=\"generateLabyrinth(true)\">Generate from Seed</button>
+  <div class="actions">
+    <button onclick="generateLabyrinth(false)">Generate Random Map</button>
+    <button onclick="generateLabyrinth(true)">Generate from Seed</button>
   </div>
 
-  <div id=\"display-seed\"></div>
-  <div id=\"map\"></div>
+  <div id="display-seed"></div>
+  <div id="map"></div>
 
-  <div class=\"sessions\">
+  <div class="sessions">
     <h2>Game Sessions</h2>
-    <button onclick=\"fetchGameSessions()\">Refresh Sessions List</button>
-    <button class=\"danger\" onclick=\"destroyAllSessions()\">Destroy All Sessions</button>
+    <button onclick="fetchGameSessions()">Refresh Sessions List</button>
+    <button class="danger" onclick="destroyAllSessions()">Destroy All Sessions</button>
 
-    <table id=\"sessions-table\">
+    <table id="sessions-table">
       <thead>
         <tr>
           <th>Session ID</th>
           <th>Creator</th>
+          <!--
+          <th>Scenario</th>
+          <th>Difficulty</th>
+          -->
           <th>Map Size</th>
           <th>Max Players</th>
           <th>Created At</th>
         </tr>
       </thead>
-      <tbody id=\"sessions-body\"></tbody>
+      <tbody id="sessions-body"></tbody>
     </table>
   </div>
 
   <script>
     async function generateLabyrinth(useSeed) {
-      const size = document.getElementById(\"size\").value;
-      const seedInput = document.getElementById(\"seed\").value;
+      const size = document.getElementById("size").value;
+      const seedInput = document.getElementById("seed").value;
       const seed = useSeed && seedInput ? seedInput : undefined;
 
-      const response = await fetch(\"/generate-labyrinth\", {
-        method: \"POST\",
-        headers: { \"Content-Type\": \"application/json\" },
+      const response = await fetch("/generate-labyrinth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ size, seed })
       });
-      if (!response.ok) return alert(\"Error generating labyrinth!\");
+      if (!response.ok) return alert("Error generating labyrinth!");
       const data = await response.json();
-      document.getElementById(\"display-seed\").innerText = `Seed used: ${data.seed}`;
+      document.getElementById("display-seed").innerText = `Seed used: ${data.seed}`;
       visualizeMap(data.tiles, size);
     }
 
     function visualizeMap(tiles, size) {
-      const map = document.getElementById(\"map\");
-      map.innerHTML = \"\";
+      const map = document.getElementById("map");
+      map.innerHTML = "";
       for (let y = 0; y < size; y++) {
-        const row = document.createElement(\"div\");
-        row.className = \"row\";
+        const row = document.createElement("div");
+        row.className = "row";
         for (let x = 0; x < size; x++) {
           const tile = tiles.find(t => t.x === x && t.y === y);
-          const img = document.createElement(\"img\");
-          img.className = \"tile-img\";
+          const img = document.createElement("img");
+          img.className = "tile-img";
           img.src = `/tiles/${tile.image}`;
           row.appendChild(img);
         }
@@ -101,15 +105,19 @@
     }
 
     async function fetchGameSessions() {
-      const res = await fetch(\"/api/game_sessions\");
+      const res = await fetch("/api/game_sessions");
       const { sessions } = await res.json();
-      const tbody = document.getElementById(\"sessions-body\");
-      tbody.innerHTML = \"\";
+      const tbody = document.getElementById("sessions-body");
+      tbody.innerHTML = "";
       sessions.forEach(session => {
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${session.id}</td>
           <td>${session.creator_client_id}</td>
+          <!--
+          <td>${session.scenario_name}</td>
+          <td>${session.difficulty}</td>
+          -->
           <td>${session.size}</td>
           <td>${session.max_players}</td>
           <td>${new Date(session.created_at).toLocaleString()}</td>
@@ -125,17 +133,17 @@
       const subrow = document.createElement('tr');
       subrow.className = 'subrow';
       subrow.innerHTML = `
-        <td colspan=\"5\">
-          <strong>Connected Mobile Clients for session ${sessionId}:</strong><br>
+        <td colspan="5">
+          <strong>Connected Mobile Clients:</strong><br>
           ${
             data.clients.length 
               ? data.clients.map((c, idx) => `
-                <div class=\"client-entry\">
+                <div class="client-entry">
                   ${idx + 1}. Client ID: ${c.client_id}, 
                   Connected At: ${new Date(c.connected_at).toLocaleString()}
                 </div>`
               ).join('') 
-              : \"No clients connected.\"
+              : "No clients connected."
           }
         </td>
       `;
@@ -144,8 +152,8 @@
 
     async function destroyAllSessions() {
       if (!confirm('Are you sure you want to destroy all sessions?')) return;
-      const res = await fetch(\"/api/game_sessions/destroy_all\", { method: \"DELETE\" });
-      if (!res.ok) return alert(\"Failed to destroy sessions.\");
+      const res = await fetch("/api/game_sessions/destroy_all", { method: "DELETE" });
+      if (!res.ok) return alert("Failed to destroy sessions.");
       fetchGameSessions();
     }
 
