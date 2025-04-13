@@ -44,23 +44,26 @@ async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Se
 
         session_readiness[session_str_id][request.client_id] = False
 
-        # Immediately broadcast updated readiness state
         players = [
             PlayerStatus(client_id=cid, ready=ready)
             for cid, ready in session_readiness[session_str_id].items()
         ]
         session_status = SessionStatus(players=players, all_ready=False)
-        await broadcast_session_update(session_str_id, session_status.dict())  # <-- fix: added await explicitly
+        await broadcast_session_update(session_str_id, session_status.dict())
 
     return {
         'message': 'Connected successfully',
         'session_id': str(session.id),
         'map_seed': session.seed,
         'labyrinth_id': str(session.labyrinth_id),
-        'start_x': session.start_x,
-        'start_y': session.start_y,
-        'size': session.size
+        'size': session.size,
+        'creator_client_id': session.creator_client_id,
+        'scenario_name': session.scenario_name,
+        'difficulty': session.difficulty,
+        'max_players': session.max_players,
+        'created_at': session.created_at.isoformat()
     }
+
 
 @router.get('/api/game_sessions/{session_id}/clients')
 async def get_connected_clients(session_id: UUID, db: Session = Depends(get_db)):
