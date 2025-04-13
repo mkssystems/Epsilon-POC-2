@@ -176,3 +176,15 @@ async def get_session_status(session_id: str):
             ]
         all_ready = all(p.ready for p in players) if players else False
         return SessionStatus(players=players, all_ready=all_ready)
+
+@router.delete('/api/game_sessions/destroy_all')
+async def destroy_all_sessions(db: Session = Depends(get_db)):
+    try:
+        db.query(MobileClient).delete()  # Delete connected mobile clients first to avoid foreign key constraints
+        db.query(GameSession).delete()
+        db.commit()
+        return {"message": "All sessions destroyed successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
