@@ -5,8 +5,11 @@ class ClientJoinRequest(BaseModel):
     client_id: str
 
 class GameSessionCreateRequest(BaseModel):
-    size: int                  # Explicitly required
-    seed: Optional[str] = None  # Optional seed parameter added
+    size: int
+    creator_client_id: str
+    scenario_name: str
+    difficulty: str
+    max_players: int
 
 from pydantic import BaseModel
 from typing import List
