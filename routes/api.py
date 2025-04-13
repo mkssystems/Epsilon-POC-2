@@ -86,8 +86,10 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
         seed=labyrinth.seed,
         labyrinth_id=labyrinth.id,
         size=request.size,
-        start_x=labyrinth.start_x,
-        start_y=labyrinth.start_y,
+        creator_client_id=request.creator_client_id,
+        scenario_name=request.scenario_name,
+        difficulty=request.difficulty,
+        max_players=request.max_players,
         created_at=datetime.utcnow()
     )
     db.add(new_session)
@@ -100,8 +102,10 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
         'seed': new_session.seed,
         'labyrinth_id': str(new_session.labyrinth_id),
         'size': new_session.size,
-        'start_x': new_session.start_x,
-        'start_y': new_session.start_y
+        'creator_client_id': new_session.creator_client_id,
+        'scenario_name': new_session.scenario_name,
+        'difficulty': new_session.difficulty,
+        'max_players': new_session.max_players
     }
 
 @router.post('/api/game_sessions/leave')
