@@ -193,4 +193,14 @@ async def get_user_game_sessions(client_id: str, db: Session = Depends(get_db)):
     sessions = db.query(GameSession).filter(GameSession.creator_client_id == client_id).all()
     return {"sessions": sessions}
 
+@router.get('/api/game_sessions/user/{client_id}/joined')
+async def get_joined_game_sessions(client_id: str, db: Session = Depends(get_db)):
+    sessions = db.query(GameSession).join(MobileClient).filter(
+        MobileClient.client_id == client_id,
+        GameSession.creator_client_id != client_id
+    ).all()
+
+    return {"sessions": sessions}
+
+
 
