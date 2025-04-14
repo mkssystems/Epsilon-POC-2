@@ -49,6 +49,26 @@ async def broadcast_game_started(session_id: str):
     message = {"event": "game_started"}
     await broadcast_session_update(session_id, message)
 
+async def broadcast_character_selected(session_id: str, client_id: str, entity_id: str):
+    message = {
+        "event": "character_selected",
+        "client_id": client_id,
+        "entity_id": entity_id
+    }
+    await broadcast_session_update(session_id, message)
+
+
+async def broadcast_character_released(session_id: str, client_id: str, entity_id: str):
+    message = {
+        "event": "character_released",
+        "client_id": client_id,
+        "entity_id": entity_id
+    }
+    await broadcast_session_update(session_id, message)
+
+
+
+
 
 # WebSocket endpoint to include in main FastAPI app
 def mount_websocket_routes(app):
