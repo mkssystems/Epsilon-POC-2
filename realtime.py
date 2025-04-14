@@ -45,6 +45,11 @@ async def broadcast_session_update(session_id: str, message: dict):
             except Exception:
                 pass  # Ignore failed sends
 
+async def broadcast_game_started(session_id: str):
+    message = {"event": "game_started"}
+    await broadcast_session_update(session_id, message)
+
+
 # WebSocket endpoint to include in main FastAPI app
 def mount_websocket_routes(app):
     from fastapi import APIRouter
