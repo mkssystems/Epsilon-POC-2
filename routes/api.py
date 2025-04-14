@@ -10,6 +10,7 @@ from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from state import session_readiness, lock
 from realtime import broadcast_session_update
 from realtime import broadcast_game_started
+from models import Entity, SessionPlayerCharacter
 
 router = APIRouter()
 
@@ -224,6 +225,80 @@ async def get_joined_game_sessions(client_id: str, db: Session = Depends(get_db)
     ).all()
 
     return {"sessions": sessions}
+
+# Fetch available characters for a given session
+@router.get("/api/game_sessions/{session_id}/available_characters")
+async def available_characters(session_id: UUID, db: Session = Depends(get_db)):
+    session = db.query(GameSession).filter(GameSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    chosen_characters = db.query(SessionPlayerCharacter).filter(
+        SessionPlayerCharacter.session_id == session_id,
+        SessionPlayerCharacter.locked == True
+    ).with_entities(SessionPlayerCharacter.entity_id).all()
+    chosen_character_ids = [char.entity_id for char in chosen_characters]
+
+    characters = db.query(Entity).filter(
+        Entity.type == 'player',
+        Entity.scenario == session.scenario_name,
+        ~Entity.id.in_(chosen_character_ids)
+    ).all()
+
+    return {"available_characters": characters}
+
+
+# Select a character for a player
+@router.post("/api/game_sessions/{session_id}/select_character")
+async def select_character(session_id: UUID, client_id: str, entity_id: str, db: Session = Depends(get_db)):
+    existing_locked = db.query(SessionPlayerCharacter).filter_by(
+        session_id=session_id, entity_id=entity_id, locked=True
+    ).first()
+
+    if existing_locked:
+        raise HTTPException(status_code=400, detail="Character already locked by another player.")
+
+    selection = db.query(SessionPlayerCharacter).filter_by(
+        session_id=session_id, client_id=client_id
+    ).first()
+
+    if not selection:
+        selection = SessionPlayerCharacter(session_id=session_id, client_id=client_id)
+
+    selection.entity_id = entity_id
+    selection.locked = False
+
+    db.add(selection)
+    db.commit()
+
+    await broadcast_session_update(str(session_id), {
+        "event": "character_selected",
+        "client_id": client_id,
+        "entity_id": entity_id
+    })
+
+    return {"message": "Character selected successfully."}
+
+
+# Release the character previously selected by a player
+@router.post("/api/game_sessions/{session_id}/release_character")
+async def release_character(session_id: UUID, client_id: str, db: Session = Depends(get_db)):
+    selection = db.query(SessionPlayerCharacter).filter_by(
+        session_id=session_id, client_id=client_id, locked=False
+    ).first()
+
+    if selection:
+        db.delete(selection)
+        db.commit()
+
+        await broadcast_session_update(str(session_id), {
+            "event": "character_released",
+            "client_id": client_id,
+            "entity_id": selection.entity_id
+        })
+
+    return {"message": "Character released successfully."}
+
 
 
 
