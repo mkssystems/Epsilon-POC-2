@@ -299,7 +299,7 @@ async def release_character(session_id: UUID, client_id: str, db: Session = Depe
         db.delete(selection)
         db.commit()
 
-       await broadcast_character_released(str(session_id), client_id, selection.entity_id)
+    await broadcast_character_released(str(session_id), client_id, selection.entity_id)
 
 
     return {"message": "Character released successfully."}
