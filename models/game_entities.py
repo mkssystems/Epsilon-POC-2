@@ -12,7 +12,8 @@ class Entity(Base):
     age = Column(String)
     role = Column(String)
     backstory_path = Column(String)
-    portrait_path = Column(String)  # New column for portrait path
+    portrait_path = Column(String)  # Existing column
+    scenario = Column(String, nullable=False, default='Epsilon267-Fulcrum Incident')  # New scenario column
     
     # Relationships
     equipment = relationship('Equipment', back_populates='entity')
@@ -20,4 +21,4 @@ class Entity(Base):
     specials = relationship('Special', back_populates='entity')
 
     def __repr__(self):
-        return f"<Entity(name={self.name}, type={self.type}, age={self.age}, role={self.role})>"
+        return f"<Entity(name={self.name}, type={self.type}, age={self.age}, role={self.role}, scenario={self.scenario})>"
