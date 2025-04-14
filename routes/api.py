@@ -283,11 +283,7 @@ async def select_character(session_id: UUID, client_id: str, entity_id: str, db:
     db.add(selection)
     db.commit()
 
-    await broadcast_session_update(str(session_id), {
-        "event": "character_selected",
-        "client_id": client_id,
-        "entity_id": entity_id
-    })
+    await broadcast_character_selected(str(session_id), client_id, entity_id)
 
     return {"message": "Character selected successfully."}
 
@@ -303,11 +299,8 @@ async def release_character(session_id: UUID, client_id: str, db: Session = Depe
         db.delete(selection)
         db.commit()
 
-        await broadcast_session_update(str(session_id), {
-            "event": "character_released",
-            "client_id": client_id,
-            "entity_id": selection.entity_id
-        })
+       await broadcast_character_released(str(session_id), client_id, selection.entity_id)
+
 
     return {"message": "Character released successfully."}
 
