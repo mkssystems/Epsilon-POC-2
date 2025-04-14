@@ -9,8 +9,14 @@ from db.session import get_db
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from state import session_readiness, lock
 from realtime import broadcast_session_update
+from realtime import broadcast_game_started
 
 router = APIRouter()
+
+@router.post("/api/game_sessions/{session_id}/start_game")
+async def start_game(session_id: str):
+    await broadcast_game_started(session_id)
+    return {"message": "Game started broadcast sent"}
 
 @router.get('/api/game_sessions')
 async def get_game_sessions(db: Session = Depends(get_db)):
