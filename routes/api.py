@@ -169,7 +169,6 @@ async def get_client_state(client_id: str, db: Session = Depends(get_db)):
             }
     return {"client_id": client_id, "connected_session": None, "session_details": None}
 
-
 @router.post("/api/game_sessions/{session_id}/toggle_readiness", response_model=SessionStatus)
 async def toggle_readiness(session_id: str, payload: PlayerStatus, db: Session = Depends(get_db)):
     with lock:
@@ -199,6 +198,8 @@ async def toggle_readiness(session_id: str, payload: PlayerStatus, db: Session =
         await broadcast_session_update(session_id, session_status.dict())
 
         return session_status
+
+
 
 @router.get("/api/game_sessions/{session_id}/status", response_model=SessionStatus)
 async def get_session_status(session_id: str):
