@@ -14,16 +14,20 @@ def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
     try:
         # Load entities into the 'entities' table first
         for index, row in df_entities.iterrows():
-            entity = Entity(
-                id=row['id'],
-                name=row['name'],
-                type=row['type'],
-                age=row['age'],
-                role=row['role'],
-                backstory_path=row['backstory_path'],
-                portrait_path=row.get('portrait_path')  # Include portrait_path from the CSV
-            )
-            session.add(entity)
+            # Load entities into the 'entities' table first
+            for index, row in df_entities.iterrows():
+                entity = Entity(
+                    id=row['id'],
+                    name=row['name'],
+                    type=row['type'],
+                    age=row['age'],
+                    role=row['role'],
+                    backstory_path=row['backstory_path'],
+                    portrait_path=row.get('portrait_path'),  # Include portrait_path from the CSV
+                    scenario=row.get('scenario', 'Epsilon267-Fulcrum Incident')  # Include scenario column
+                )
+                session.add(entity)
+
         
         # Commit the entities to ensure they are in the database
         session.commit()
