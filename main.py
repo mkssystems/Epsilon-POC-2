@@ -16,7 +16,7 @@ from models.game_session import GameSession
 from models.labyrinth import Labyrinth
 from models.player import Player
 from models.tile import Tile
-from models.game_entities import Base as EntityBase
+from models import Base as EntityBase
 from db.init_data import load_data
 from db.session import get_db
 
