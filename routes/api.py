@@ -171,12 +171,23 @@ async def get_client_state(client_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/game_sessions/{session_id}/toggle_readiness", response_model=SessionStatus)
-async def toggle_readiness(session_id: str, payload: PlayerStatus):
+async def toggle_readiness(session_id: str, payload: PlayerStatus, db: Session = Depends(get_db)):
     with lock:
         if session_id not in session_readiness:
             session_readiness[session_id] = {}
 
         session_readiness[session_id][payload.client_id] = payload.ready
+
+        # Lock or unlock the player's character selection based on readiness
+        selection = db.query(SessionPlayerCharacter).filter_by(
+            session_id=session_id, client_id=payload.client_id
+        ).first()
+
+        if not selection:
+            raise HTTPException(status_code=400, detail="Player has not selected a character yet.")
+
+        selection.locked = payload.ready  # Lock if ready=True, unlock if ready=False
+        db.commit()
 
         players = [
             PlayerStatus(client_id=cid, ready=ready)
@@ -185,7 +196,7 @@ async def toggle_readiness(session_id: str, payload: PlayerStatus):
         all_ready = all(p.ready for p in players)
         session_status = SessionStatus(players=players, all_ready=all_ready)
 
-        await broadcast_session_update(session_id, session_status.dict())  # <-- fix: added await explicitly
+        await broadcast_session_update(session_id, session_status.dict())
 
         return session_status
 
