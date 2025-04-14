@@ -45,17 +45,23 @@ FORCE_REINIT_DB = True
 def startup():
     init_db()
 
-    if FORCE_REINIT_DB:
-        print("⚠️ Reinitializing the database from scratch...")
-        EntityBase.metadata.drop_all(bind=engine)
-        EntityBase.metadata.create_all(bind=engine)
+   if FORCE_REINIT_DB:
+    print("⚠️ Reinitializing the database from scratch...")
+    EntityBase.metadata.drop_all(bind=engine)
+    EntityBase.metadata.create_all(bind=engine)
 
-        df_entities = pd.read_csv("assets/seed/entities.csv")
-        df_equipment = pd.read_csv("assets/seed/equipment.csv")
-        df_skills = pd.read_csv("assets/seed/skills.csv")
-        df_specials = pd.read_csv("assets/seed/specials.csv")
+    # Before inserting, explicitly clear existing tables to avoid duplicates
+    with engine.connect() as conn:
+        conn.execute(text("TRUNCATE TABLE entities, equipment, skills, specials RESTART IDENTITY CASCADE;"))
+        conn.commit()
 
-        load_data(engine, df_entities, df_equipment, df_skills, df_specials)
+    df_entities = pd.read_csv("assets/seed/entities.csv")
+    df_equipment = pd.read_csv("assets/seed/equipment.csv")
+    df_skills = pd.read_csv("assets/seed/skills.csv")
+    df_specials = pd.read_csv("assets/seed/specials.csv")
+
+    load_data(engine, df_entities, df_equipment, df_skills, df_specials)
+
 
 class GameSessionCreateRequest(BaseModel):
     size: int
