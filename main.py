@@ -29,7 +29,7 @@ from models.skills import Skill
 from models.specials import Special
 from state import session_readiness, lock
 
-from config import DATABASE_URL, init_db
+from config import DATABASE_URL
 
 # Import API router
 from routes.api import router as api_router
@@ -46,8 +46,7 @@ FORCE_REINIT_DB = True
 
 @app.on_event("startup")
 def startup():
-    init_db()
-
+    
     if FORCE_REINIT_DB:
         print("⚠️ Reinitializing the database from scratch...")
 
