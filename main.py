@@ -48,21 +48,22 @@ def startup():
 
     if FORCE_REINIT_DB:
         print("⚠️ Reinitializing the database from scratch...")
+
+        # Drop and recreate tables explicitly first
         EntityBase.metadata.drop_all(bind=engine)
         EntityBase.metadata.create_all(bind=engine)
 
-        # Before inserting, explicitly clear existing tables to avoid duplicates
-        with engine.connect() as conn:
+        # Explicitly truncate tables to ensure emptiness
+        with engine.begin() as conn:
             conn.execute(text("TRUNCATE TABLE entities, equipment, skills, specials RESTART IDENTITY CASCADE;"))
-            conn.commit()
 
+        # Now load the data clearly
         df_entities = pd.read_csv("assets/seed/entities.csv")
         df_equipment = pd.read_csv("assets/seed/equipment.csv")
         df_skills = pd.read_csv("assets/seed/skills.csv")
         df_specials = pd.read_csv("assets/seed/specials.csv")
 
         load_data(engine, df_entities, df_equipment, df_skills, df_specials)
-
 
 
 class GameSessionCreateRequest(BaseModel):
