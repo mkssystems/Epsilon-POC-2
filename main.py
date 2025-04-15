@@ -46,23 +46,23 @@ FORCE_REINIT_DB = True
 
 @app.on_event("startup")
 def startup():
-    
     if FORCE_REINIT_DB:
-    print("⚠️ Reinitializing the database from scratch...")
+        print("⚠️ Reinitializing the database from scratch...")
 
-    # Automatically drop all tables without manually specifying them
-    EntityBase.metadata.drop_all(bind=engine)
+        # Automatically drop all tables without manually specifying them
+        EntityBase.metadata.drop_all(bind=engine)
 
-    # Automatically recreate all tables defined in EntityBase
-    EntityBase.metadata.create_all(bind=engine)
+        # Automatically recreate all tables defined in EntityBase
+        EntityBase.metadata.create_all(bind=engine)
 
-    # Load data clearly
-    df_entities = pd.read_csv("assets/seed/entities.csv")
-    df_equipment = pd.read_csv("assets/seed/equipment.csv")
-    df_skills = pd.read_csv("assets/seed/skills.csv")
-    df_specials = pd.read_csv("assets/seed/specials.csv")
+        # Load data clearly
+        df_entities = pd.read_csv("assets/seed/entities.csv")
+        df_equipment = pd.read_csv("assets/seed/equipment.csv")
+        df_skills = pd.read_csv("assets/seed/skills.csv")
+        df_specials = pd.read_csv("assets/seed/specials.csv")
 
-    load_data(engine, df_entities, df_equipment, df_skills, df_specials)
+        load_data(engine, df_entities, df_equipment, df_skills, df_specials)
+
 
 
 
