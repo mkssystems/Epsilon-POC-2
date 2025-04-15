@@ -9,10 +9,3 @@ engine = create_engine(DATABASE_URL, echo=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-def init_db():
-    """Initialize the database by creating tables only (NO data loading here explicitly)."""
-    try:
-        Base.metadata.create_all(bind=engine)
-        print("Database initialized successfully! (tables created only)")
-    except Exception as e:
-        print(f"Error initializing database: {e}")
