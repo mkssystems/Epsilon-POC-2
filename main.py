@@ -51,21 +51,34 @@ def startup():
     if FORCE_REINIT_DB:
         print("⚠️ Reinitializing the database from scratch...")
 
-        # Drop and recreate tables explicitly first
-        EntityBase.metadata.drop_all(bind=engine)
+        with engine.begin() as conn:
+            # Explicitly drop tables with CASCADE, ensuring clean slate
+            conn.execute(text("""
+                DROP TABLE IF EXISTS session_player_characters CASCADE;
+                DROP TABLE IF EXISTS equipment CASCADE;
+                DROP TABLE IF EXISTS skills CASCADE;
+                DROP TABLE IF EXISTS specials CASCADE;
+                DROP TABLE IF EXISTS entities CASCADE;
+                DROP TABLE IF EXISTS tiles CASCADE;
+                DROP TABLE IF EXISTS mobile_clients CASCADE;
+                DROP TABLE IF EXISTS game_sessions CASCADE;
+                DROP TABLE IF EXISTS labyrinths CASCADE;
+                DROP TABLE IF EXISTS players CASCADE;
+            """))
+
+        # After explicitly dropping, recreate tables freshly
         EntityBase.metadata.create_all(bind=engine)
 
-        # Explicitly truncate tables to ensure emptiness
-        with engine.begin() as conn:
-            conn.execute(text("TRUNCATE TABLE entities, equipment, skills, specials RESTART IDENTITY CASCADE;"))
+        # No need to truncate after drop and recreate (tables guaranteed empty)
 
-        # Now load the data clearly
+        # Clearly load data from CSV seed files
         df_entities = pd.read_csv("assets/seed/entities.csv")
         df_equipment = pd.read_csv("assets/seed/equipment.csv")
         df_skills = pd.read_csv("assets/seed/skills.csv")
         df_specials = pd.read_csv("assets/seed/specials.csv")
 
         load_data(engine, df_entities, df_equipment, df_skills, df_specials)
+
 
 
 class GameSessionCreateRequest(BaseModel):
