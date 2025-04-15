@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 from datetime import datetime
+from sqlalchemy import text
 from sqlalchemy import create_engine
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from uuid import UUID
