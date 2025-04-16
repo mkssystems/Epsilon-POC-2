@@ -308,6 +308,38 @@ async def release_character(session_id: UUID, client_id: str, db: Session = Depe
 
     return {"message": "Character released successfully."}
 
+# Endpoint to fetch currently selected characters for all clients connected to a specific game session
+@router.get("/api/game_sessions/{session_id}/selected_characters")
+async def get_selected_characters(session_id: UUID, db: Session = Depends(get_db)):
+    # Retrieve the game session by provided session_id
+    session = db.query(GameSession).filter(GameSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Fetch all currently connected clients for this session
+    connected_clients = session.connected_clients
+
+    # Prepare a list to store each client's selected character (if any)
+    selected_characters = []
+
+    # Iterate through each connected client to check their selected characters
+    for client in connected_clients:
+        # Query if the client has selected a character
+        selection = db.query(SessionPlayerCharacter).filter_by(
+            session_id=session_id,
+            client_id=client.client_id
+        ).first()
+
+        # Append the client's selection status to the response list
+        selected_characters.append({
+            "client_id": client.client_id,                      # The ID of the connected client
+            "entity_id": selection.entity_id if selection else None  # Selected character ID or None if not selected
+        })
+
+    # Return the structured response with all clients and their selected character statuses
+    return {"selected_characters": selected_characters}
+
+
 
 
 
