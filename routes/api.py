@@ -264,16 +264,20 @@ async def available_characters(session_id: UUID, db: Session = Depends(get_db)):
     return {"available_characters": characters}
 
 
-# Select a character for a player
+# Endpoint for a player to select a character in a specific session
 @router.post("/api/game_sessions/{session_id}/select_character")
 async def select_character(session_id: UUID, client_id: str, entity_id: str, db: Session = Depends(get_db)):
-    existing_locked = db.query(SessionPlayerCharacter).filter_by(
-        session_id=session_id, entity_id=entity_id, locked=True
+    # Check if the character is already selected by ANY player (locked or unlocked)
+    existing_selection = db.query(SessionPlayerCharacter).filter(
+        SessionPlayerCharacter.session_id == session_id,
+        SessionPlayerCharacter.entity_id == entity_id
     ).first()
 
-    if existing_locked:
-        raise HTTPException(status_code=400, detail="Character already locked by another player.")
+    # If character is already selected, reject the request explicitly
+    if existing_selection and existing_selection.client_id != client_id:
+        raise HTTPException(status_code=400, detail="Character already selected by another player.")
 
+    # Retrieve or create a character selection for this player
     selection = db.query(SessionPlayerCharacter).filter_by(
         session_id=session_id, client_id=client_id
     ).first()
@@ -281,12 +285,14 @@ async def select_character(session_id: UUID, client_id: str, entity_id: str, db:
     if not selection:
         selection = SessionPlayerCharacter(session_id=session_id, client_id=client_id)
 
+    # Assign the selected character ID to this player explicitly
     selection.entity_id = entity_id
-    selection.locked = False
+    selection.locked = False  # Character initially unlocked until player confirms readiness
 
     db.add(selection)
     db.commit()
 
+    # Notify other clients explicitly via WebSocket about this character selection
     await broadcast_character_selected(str(session_id), client_id, entity_id)
 
     return {"message": "Character selected successfully."}
