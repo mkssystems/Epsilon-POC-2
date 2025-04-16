@@ -298,21 +298,30 @@ async def select_character(session_id: UUID, client_id: str, entity_id: str, db:
     return {"message": "Character selected successfully."}
 
 
-# Release the character previously selected by a player
+# Endpoint to explicitly release (deselect) a previously selected character by the player
 @router.post("/api/game_sessions/{session_id}/release_character")
 async def release_character(session_id: UUID, client_id: str, db: Session = Depends(get_db)):
+    # Fetch existing character selection for this player, locked or unlocked
     selection = db.query(SessionPlayerCharacter).filter_by(
-        session_id=session_id, client_id=client_id, locked=False
+        session_id=session_id, client_id=client_id
     ).first()
 
-    if selection:
-        db.delete(selection)
-        db.commit()
+    # Explicitly handle case where no character is selected
+    if not selection:
+        raise HTTPException(status_code=400, detail="No character selected to release.")
 
-    await broadcast_character_released(str(session_id), client_id, selection.entity_id)
+    # Store entity_id explicitly before deletion
+    entity_id = selection.entity_id
 
+    # Delete selection record explicitly
+    db.delete(selection)
+    db.commit()
+
+    # Explicitly notify other clients about character release via WebSocket
+    await broadcast_character_released(str(session_id), client_id, entity_id)
 
     return {"message": "Character released successfully."}
+
 
 # Endpoint to fetch currently selected characters for all clients connected to a specific game session
 @router.get("/api/game_sessions/{session_id}/selected_characters")
