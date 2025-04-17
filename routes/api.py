@@ -266,66 +266,85 @@ async def available_characters(session_id: UUID, db: Session = Depends(get_db)):
     return {"available_characters": characters}
 
 
+# Updated routes/api.py
+
 # Endpoint for a player to select a character in a specific session
 @router.post("/api/game_sessions/{session_id}/select_character")
 async def select_character(session_id: UUID, client_id: str, entity_id: str, db: Session = Depends(get_db)):
-    # Retrieve any existing character selection for this specific player in this session
+    # Check if the desired character is already selected by another player (locked or unlocked)
+    existing_selection_by_others = db.query(SessionPlayerCharacter).filter(
+        SessionPlayerCharacter.session_id == session_id,
+        SessionPlayerCharacter.entity_id == entity_id,
+        SessionPlayerCharacter.client_id != client_id
+    ).first()
+
+    if existing_selection_by_others:
+        raise HTTPException(
+            status_code=400,
+            detail="Character already selected by another player."
+        )
+
+    # Fetch existing selection explicitly for the current client (if any)
     existing_selection = db.query(SessionPlayerCharacter).filter_by(
-        session_id=session_id, client_id=client_id
+        session_id=session_id,
+        client_id=client_id
     ).first()
 
     if existing_selection:
-        # Check explicitly if the current selection is locked (player marked as ready)
+        # Ensure player is not locked (ready); locked players can't change their character
         if existing_selection.locked:
-            # Reject any attempt to change the character explicitly if the player is ready
             raise HTTPException(
-                status_code=400, 
-                detail="Cannot change character while locked. Please toggle readiness first."
+                status_code=400,
+                detail="Cannot change character when ready. Please toggle readiness first."
             )
-        else:
-            # Player is not locked; explicitly allow updating the selected character
-            existing_selection.entity_id = entity_id
+        # Explicitly update the character selection for the current player
+        existing_selection.entity_id = entity_id
     else:
-        # No existing character selection; explicitly create a new selection entry
+        # Explicitly create new character selection if none exists
         existing_selection = SessionPlayerCharacter(
-            session_id=session_id, 
-            client_id=client_id, 
-            entity_id=entity_id, 
-            locked=False  # initially unlocked (player not marked ready yet)
+            session_id=session_id,
+            client_id=client_id,
+            entity_id=entity_id,
+            locked=False
         )
         db.add(existing_selection)
 
-    # Save changes explicitly to the database
     db.commit()
 
-    # Explicitly broadcast the new character selection to all connected clients via WebSocket
+    # Notify all connected clients explicitly about this character selection
     await broadcast_character_selected(str(session_id), client_id, entity_id)
 
-    # Confirm successful selection explicitly to the frontend
     return {"message": "Character selected successfully."}
-
 
 
 # Endpoint to explicitly release (deselect) a previously selected character by the player
 @router.post("/api/game_sessions/{session_id}/release_character")
 async def release_character(session_id: UUID, client_id: str, db: Session = Depends(get_db)):
-    # Fetch existing character selection for this player, locked or unlocked
+    # Fetch existing character selection for this player
     selection = db.query(SessionPlayerCharacter).filter_by(
-        session_id=session_id, client_id=client_id
+        session_id=session_id,
+        client_id=client_id
     ).first()
 
     # Explicitly handle case where no character is selected
     if not selection:
         raise HTTPException(status_code=400, detail="No character selected to release.")
 
-    # Store entity_id explicitly before deletion
+    # Players who marked themselves ready (locked=True) can't release the character
+    if selection.locked:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot release character when ready. Please toggle readiness first."
+        )
+
+    # Store entity_id explicitly before deletion for notification
     entity_id = selection.entity_id
 
-    # Delete selection record explicitly
+    # Explicitly remove character selection from database
     db.delete(selection)
     db.commit()
 
-    # Explicitly notify other clients about character release via WebSocket
+    # Explicitly broadcast character release event to all clients
     await broadcast_character_released(str(session_id), client_id, entity_id)
 
     return {"message": "Character released successfully."}
@@ -334,34 +353,29 @@ async def release_character(session_id: UUID, client_id: str, db: Session = Depe
 # Endpoint to fetch currently selected characters for all clients connected to a specific game session
 @router.get("/api/game_sessions/{session_id}/selected_characters")
 async def get_selected_characters(session_id: UUID, db: Session = Depends(get_db)):
-    # Retrieve the game session by provided session_id
     session = db.query(GameSession).filter(GameSession.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Fetch all currently connected clients for this session
     connected_clients = session.connected_clients
 
-    # Prepare a list to store each client's selected character (if any)
     selected_characters = []
 
-    # Iterate through each connected client to check their selected characters
     for client in connected_clients:
-        # Query if the client has selected a character
         selection = db.query(SessionPlayerCharacter).filter_by(
             session_id=session_id,
             client_id=client.client_id
         ).first()
 
-        # Append the client's selection status explicitly with lock status to the response list
         selected_characters.append({
-            "client_id": client.client_id,                      # The ID of the connected client
-            "entity_id": selection.entity_id if selection else None,  # Selected character ID or None if not selected
-            "locked": selection.locked if selection else False       # Explicitly include locked status
+            "client_id": client.client_id,
+            # Explicitly set to None if no selection is present
+            "entity_id": selection.entity_id if selection else None,
+            "locked": selection.locked if selection else False
         })
 
-    # Return the structured response with all clients and their selected character statuses including lock status
     return {"selected_characters": selected_characters}
+
 
 
 
