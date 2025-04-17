@@ -347,14 +347,14 @@ async def get_selected_characters(session_id: UUID, db: Session = Depends(get_db
             client_id=client.client_id
         ).first()
 
-        # Append the client's selection status to the response list
+        # Append the client's selection status explicitly with lock status to the response list
         selected_characters.append({
             "client_id": client.client_id,                      # The ID of the connected client
-            "entity_id": selection.entity_id if selection else None  # Selected character ID or None if not selected
-            
+            "entity_id": selection.entity_id if selection else None,  # Selected character ID or None if not selected
+            "locked": selection.locked if selection else False       # Explicitly include locked status
         })
 
-    # Return the structured response with all clients and their selected character statuses
+    # Return the structured response with all clients and their selected character statuses including lock status
     return {"selected_characters": selected_characters}
 
 
