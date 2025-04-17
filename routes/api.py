@@ -249,29 +249,31 @@ async def get_joined_game_sessions(client_id: str, db: Session = Depends(get_db)
 
     return {"sessions": sessions}
 
-# Fetch available characters for a given session
+# Explicitly fetch characters that are not yet selected by any player (locked OR unlocked)
 @router.get("/api/game_sessions/{session_id}/available_characters")
 async def available_characters(session_id: UUID, db: Session = Depends(get_db)):
+    # Fetch the game session explicitly
     session = db.query(GameSession).filter(GameSession.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    # Explicitly get IDs of ALL selected characters (regardless of locked status!)
     chosen_characters = db.query(SessionPlayerCharacter).filter(
-        SessionPlayerCharacter.session_id == session_id,
-        SessionPlayerCharacter.locked == True
+        SessionPlayerCharacter.session_id == session_id
     ).with_entities(SessionPlayerCharacter.entity_id).all()
+
     chosen_character_ids = [char.entity_id for char in chosen_characters]
 
+    # Explicitly exclude all currently selected characters from availability
     characters = db.query(Entity).filter(
         Entity.type == 'player',
         Entity.scenario == session.scenario_name,
-        ~Entity.id.in_(chosen_character_ids)
+        ~Entity.id.in_(chosen_character_ids)  # Explicit exclusion of all selected characters
     ).all()
 
     return {"available_characters": characters}
 
 
-# Updated routes/api.py
 
 # Endpoint for a player to select a character in a specific session
 @router.post("/api/game_sessions/{session_id}/select_character")
