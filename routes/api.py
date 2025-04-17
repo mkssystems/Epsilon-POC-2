@@ -269,35 +269,41 @@ async def available_characters(session_id: UUID, db: Session = Depends(get_db)):
 # Endpoint for a player to select a character in a specific session
 @router.post("/api/game_sessions/{session_id}/select_character")
 async def select_character(session_id: UUID, client_id: str, entity_id: str, db: Session = Depends(get_db)):
-    # Check if the character is already selected by ANY player (locked or unlocked)
-    existing_selection = db.query(SessionPlayerCharacter).filter(
-        SessionPlayerCharacter.session_id == session_id,
-        SessionPlayerCharacter.entity_id == entity_id
-    ).first()
-
-    # If character is already selected, reject the request explicitly
-    if existing_selection and existing_selection.client_id != client_id:
-        raise HTTPException(status_code=400, detail="Character already selected by another player.")
-
-    # Retrieve or create a character selection for this player
-    selection = db.query(SessionPlayerCharacter).filter_by(
+    # Retrieve any existing character selection for this specific player in this session
+    existing_selection = db.query(SessionPlayerCharacter).filter_by(
         session_id=session_id, client_id=client_id
     ).first()
 
-    if not selection:
-        selection = SessionPlayerCharacter(session_id=session_id, client_id=client_id)
+    if existing_selection:
+        # Check explicitly if the current selection is locked (player marked as ready)
+        if existing_selection.locked:
+            # Reject any attempt to change the character explicitly if the player is ready
+            raise HTTPException(
+                status_code=400, 
+                detail="Cannot change character while locked. Please toggle readiness first."
+            )
+        else:
+            # Player is not locked; explicitly allow updating the selected character
+            existing_selection.entity_id = entity_id
+    else:
+        # No existing character selection; explicitly create a new selection entry
+        existing_selection = SessionPlayerCharacter(
+            session_id=session_id, 
+            client_id=client_id, 
+            entity_id=entity_id, 
+            locked=False  # initially unlocked (player not marked ready yet)
+        )
+        db.add(existing_selection)
 
-    # Assign the selected character ID to this player explicitly
-    selection.entity_id = entity_id
-    selection.locked = False  # Character initially unlocked until player confirms readiness
-
-    db.add(selection)
+    # Save changes explicitly to the database
     db.commit()
 
-    # Notify other clients explicitly via WebSocket about this character selection
+    # Explicitly broadcast the new character selection to all connected clients via WebSocket
     await broadcast_character_selected(str(session_id), client_id, entity_id)
 
+    # Confirm successful selection explicitly to the frontend
     return {"message": "Character selected successfully."}
+
 
 
 # Endpoint to explicitly release (deselect) a previously selected character by the player
