@@ -14,6 +14,8 @@ from realtime import broadcast_session_update
 from realtime import broadcast_game_started
 from models import Entity, SessionPlayerCharacter
 from realtime import broadcast_character_selected
+from realtime import broadcast_character_released
+
 
 
 router = APIRouter()
