@@ -181,29 +181,34 @@ async def toggle_readiness(session_id: str, payload: PlayerStatus, db: Session =
         if session_id not in session_readiness:
             session_readiness[session_id] = {}
 
-        session_readiness[session_id][payload.client_id] = payload.ready
-
-        # Lock or unlock the player's character selection based on readiness
+        # Explicitly fetch selection to confirm a character is selected before marking ready
         selection = db.query(SessionPlayerCharacter).filter_by(
             session_id=session_id, client_id=payload.client_id
         ).first()
 
-        if not selection:
-            raise HTTPException(status_code=400, detail="Player has not selected a character yet.")
+        if not selection and payload.ready:
+            # Explicitly prevent players without a character selection from marking as ready
+            raise HTTPException(status_code=400, detail="Select a character before marking ready.")
 
-        selection.locked = payload.ready  # Lock if ready=True, unlock if ready=False
-        db.commit()
+        if selection:
+            # Explicitly lock/unlock character selection based on readiness
+            selection.locked = payload.ready
+            db.commit()
+
+        session_readiness[session_id][payload.client_id] = payload.ready
 
         players = [
             PlayerStatus(client_id=cid, ready=ready)
             for cid, ready in session_readiness[session_id].items()
         ]
+
         all_ready = all(p.ready for p in players)
         session_status = SessionStatus(players=players, all_ready=all_ready)
 
         await broadcast_session_update(session_id, session_status.dict())
 
         return session_status
+
 
 
 
@@ -317,37 +322,35 @@ async def select_character(session_id: UUID, client_id: str, entity_id: str, db:
     return {"message": "Character selected successfully."}
 
 
-# Endpoint to explicitly release (deselect) a previously selected character by the player
 @router.post("/api/game_sessions/{session_id}/release_character")
 async def release_character(session_id: UUID, client_id: str, db: Session = Depends(get_db)):
-    # Fetch existing character selection for this player
+    # Explicitly fetch existing selection for this player only
     selection = db.query(SessionPlayerCharacter).filter_by(
-        session_id=session_id,
-        client_id=client_id
+        session_id=session_id, client_id=client_id
     ).first()
 
-    # Explicitly handle case where no character is selected
+    # Handle explicitly if no character is currently selected by this player
     if not selection:
         raise HTTPException(status_code=400, detail="No character selected to release.")
 
-    # Players who marked themselves ready (locked=True) can't release the character
+    # Explicitly prevent releasing the character if player is ready (locked)
     if selection.locked:
         raise HTTPException(
             status_code=400,
             detail="Cannot release character when ready. Please toggle readiness first."
         )
 
-    # Store entity_id explicitly before deletion for notification
     entity_id = selection.entity_id
 
-    # Explicitly remove character selection from database
+    # Explicitly delete only this player's selection without affecting others
     db.delete(selection)
     db.commit()
 
-    # Explicitly broadcast character release event to all clients
+    # Explicitly broadcast character released event only for this player's selection
     await broadcast_character_released(str(session_id), client_id, entity_id)
 
     return {"message": "Character released successfully."}
+
 
 
 # Endpoint to fetch currently selected characters for all clients connected to a specific game session
