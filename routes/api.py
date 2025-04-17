@@ -382,6 +382,20 @@ async def get_selected_characters(session_id: UUID, db: Session = Depends(get_db
     return {"selected_characters": selected_characters}
 
 
+# Explicitly fetch ALL scenario characters (including selected and locked ones)
+@router.get("/api/game_sessions/{session_id}/all_characters")
+async def all_characters(session_id: UUID, db: Session = Depends(get_db)):
+    session = db.query(GameSession).filter(GameSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Explicitly fetch ALL player characters for the scenario
+    characters = db.query(Entity).filter(
+        Entity.type == 'player',
+        Entity.scenario == session.scenario_name
+    ).all()
+
+    return {"all_characters": characters}
 
 
 
