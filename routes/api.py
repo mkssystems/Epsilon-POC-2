@@ -7,7 +7,7 @@ from models.mobile_client import MobileClient
 from uuid import UUID, uuid4
 from datetime import datetime
 from schemas import ClientJoinRequest, GameSessionCreateRequest, PlayerStatus, SessionStatus
-from db.session import get_db
+
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
 from state import session_readiness, lock
 from realtime import broadcast_session_update
