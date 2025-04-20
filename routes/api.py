@@ -15,7 +15,9 @@ from realtime import broadcast_game_started
 from models import Entity, SessionPlayerCharacter
 from realtime import broadcast_character_selected
 from realtime import broadcast_character_released
-
+from flask import jsonify
+from models.game_state_db import GameStateDB
+from db import get_db_session  # Your existing DB session handler explicitly
 
 
 router = APIRouter()
@@ -396,6 +398,19 @@ async def all_characters(session_id: UUID, db: Session = Depends(get_db)):
     ).all()
 
     return {"all_characters": characters}
+
+# Explicit API endpoint to retrieve current game state by session_id
+@api.route('/api/game-state/<session_id>', methods=['GET'])
+def get_game_state(session_id):
+    session: Session = get_db_session()  # Explicitly retrieve active DB session
+    db_entry = session.query(GameStateDB).get(session_id)
+
+    if not db_entry:
+        # Explicitly handle scenario if session_id does not exist
+        return jsonify({"error": "Session not found"}), 404
+
+    # Explicitly return serialized current game state as JSON
+    return jsonify(db_entry.game_state), 200
 
 
 
