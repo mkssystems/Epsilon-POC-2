@@ -16,7 +16,8 @@ from models import Entity, SessionPlayerCharacter
 from realtime import broadcast_character_selected
 from realtime import broadcast_character_released
 
-from models.game_state_db import GameStateDB
+from game_logic.models.game_state_db import GameStateDB
+
 from db import get_db_session  # Your existing DB session handler explicitly
 
 
