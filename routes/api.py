@@ -399,19 +399,18 @@ async def all_characters(session_id: UUID, db: Session = Depends(get_db)):
 
     return {"all_characters": characters}
 
-# Explicit API endpoint to retrieve current game state by session_id
-@api.route('/api/game-state/<session_id>', methods=['GET'])
-def get_game_state(session_id):
-    session: Session = get_db_session()  # Explicitly retrieve active DB session
-    db_entry = session.query(GameStateDB).get(session_id)
+# routes/api.py (Corrected FastAPI implementation)
+@router.get('/api/game-state/{session_id}')
+async def get_game_state(session_id: str, db: Session = Depends(get_db)):
+    # Explicitly retrieve game state by session_id from the database
+    db_entry = db.query(GameStateDB).filter(GameStateDB.session_id == session_id).first()
 
     if not db_entry:
-        # Explicitly handle scenario if session_id does not exist
-        return jsonify({"error": "Session not found"}), 404
+        # Explicitly handle case where session_id does not exist
+        raise HTTPException(status_code=404, detail="Session not found")
 
-    # Explicitly return serialized current game state as JSON
-    return jsonify(db_entry.game_state), 200
-
+    # Explicitly return the serialized game state as JSON
+    return db_entry.game_state
 
 
 
