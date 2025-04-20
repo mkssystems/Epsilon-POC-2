@@ -18,7 +18,7 @@ from realtime import broadcast_character_released
 
 from game_logic.models.game_state_db import GameStateDB
 
-from db import get_db_session  # Your existing DB session handler explicitly
+from models.base import get_db  # Your existing DB session handler explicitly
 
 
 router = APIRouter()
