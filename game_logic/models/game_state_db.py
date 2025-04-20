@@ -1,7 +1,7 @@
 # models/game_state_db.py
 from sqlalchemy import Column, String, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
-from game_logic.db import Base  # Your existing SQLAlchemy Base model
+from models.base import Base  # Your existing SQLAlchemy Base model
 
 # Database model explicitly representing the game state in PostgreSQL
 class GameStateDB(Base):
