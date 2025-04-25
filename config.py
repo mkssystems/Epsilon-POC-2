@@ -9,3 +9,6 @@ engine = create_engine(DATABASE_URL, echo=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Explicit WebSocket timeout parameter (in seconds)
+WEBSOCKET_INACTIVITY_TIMEOUT = 600  # 10 minutes
+
