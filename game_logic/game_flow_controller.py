@@ -6,36 +6,31 @@ from utils.db_utils import (
     get_db_session, 
     load_initial_game_state
 )
+from game_logic.phases.turn_zero import execute_turn_zero
 
 class GameFlowController:
     def __init__(self, session_id: str):
-        self.session_id = session_id  # Explicitly store session identifier
+        """
+        Explicitly initializes GameFlowController with session ID and retrieves initial game state.
 
-        # Explicitly get a new database session for this controller
+        Args:
+            session_id (str): Identifier for the current game session.
+        """
+        self.session_id = session_id
         self.db_session: Session = get_db_session()
-
-        # Explicitly load initial game state based on session_id
         self.game_state: GameState = load_initial_game_state(self.db_session, session_id)
 
     def start_game(self):
-        # Explicitly set the initial phase to 'turn_zero' when game starts
-        self.game_state.phase = "turn_zero"
-        self.game_state.turn_number = 0  # explicitly set the initial turn number
+        """
+        Explicitly delegates Turn 0 initialization to its dedicated phase logic.
+        """
+        execute_turn_zero(self.db_session, self.game_state)
 
-        # TODO: Implement any additional explicit initialization logic here
-        # For example: populate entities, prepare labyrinth, etc.
+        print(f"[INFO] Game start explicitly handled by Turn 0 for session {self.session_id}")
 
-        # Explicitly save the updated game state to the database
-        save_game_state_to_db(self.db_session, self.game_state)
-
-        # Log explicit confirmation (good practice)
-        print(f"[INFO] Game started explicitly for session {self.session_id} at phase '{self.game_state.phase}'.")
-    
     def advance_phase(self):
-        # Explicit logic to advance the game to the next phase (existing method)
-        # This method will later be detailed incrementally
-        # Update phase and turn counter explicitly as needed
-
-        # Save explicitly updated game state to the database after changes
+        """
+        Explicit logic to advance the game to the next phase. (Further details to be added incrementally)
+        """
+        # Implementation of phase advancement will be explicitly detailed later
         save_game_state_to_db(self.db_session, self.game_state)
-
