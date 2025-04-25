@@ -69,6 +69,19 @@ async def broadcast_character_released(session_id: str, client_id: str, entity_i
     await broadcast_session_update(session_id, message)
 
 
+# ping-pong
+@router.websocket("/ws/{session_id}/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str):
+    await connect_to_session(session_id, client_id, websocket)
+    try:
+        while True:
+            message = await websocket.receive_text()
+            if message:
+                data = json.loads(message)
+                if data.get('type') == 'ping':
+                    await websocket.send_text(json.dumps({"type": "pong"}))  # explicitly respond to ping
+    except WebSocketDisconnect:
+        await disconnect_from_session(session_id, websocket)
 
 
 
