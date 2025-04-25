@@ -80,7 +80,9 @@ def mount_websocket_routes(app):
 
     @router.websocket("/ws/{session_id}/{client_id}")
     async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str):
+        # Explicitly accept the WebSocket connection and register it
         await connect_to_session(session_id, client_id, websocket)
+
         try:
             while True:
                 # Explicitly wait for incoming JSON messages from the frontend
@@ -90,7 +92,10 @@ def mount_websocket_routes(app):
                 try:
                     data = json.loads(message_text)
                 except json.JSONDecodeError:
-                    await websocket.send_json({"type": "error", "message": "Invalid JSON format."})
+                    await websocket.send_json({
+                        "type": "error", 
+                        "message": "Invalid JSON format."
+                    })
                     continue
 
                 # Explicit handling for specific WebSocket actions
@@ -117,6 +122,7 @@ def mount_websocket_routes(app):
                         print(f"[INFO] Game started successfully for session: {session_id}")
 
                     except Exception as e:
+                        # Handle exceptions explicitly and inform the client
                         await websocket.send_json({
                             "type": "error",
                             "message": f"Error starting game: {str(e)}"
@@ -124,19 +130,28 @@ def mount_websocket_routes(app):
 
                         print(f"[ERROR] Error starting game for session {session_id}: {str(e)}")
 
-                # Explicitly handle ping messages from frontend
+                # Explicitly handle ping messages from frontend (heartbeat)
                 elif data.get('type') == 'ping':
+                    print(f"[INFO] Received 'ping' from client {client_id} (session: {session_id})")
                     await websocket.send_json({"type": "pong"})  # Explicitly respond with pong
-                
-                
+                    print(f"[INFO] Sent 'pong' to client {client_id} (session: {session_id})")
+
                 else:
-                    # Handle other actions or send default response
+                    # Handle unknown actions explicitly or send default response
                     await websocket.send_json({
                         "type": "error",
                         "message": "Unknown action provided."
                     })
 
         except WebSocketDisconnect:
+            # Explicitly log client-side triggered disconnections
+            print(f"[INFO] WebSocketDisconnect explicitly triggered by client {client_id} (session: {session_id})")
             await disconnect_from_session(session_id, websocket)
 
+        except Exception as e:
+            # Explicitly log unexpected errors and perform safe disconnection
+            print(f"[ERROR] Unexpected error explicitly occurred for client {client_id} (session: {session_id}): {str(e)}")
+            await disconnect_from_session(session_id, websocket)
+
+    # Explicitly include router into the FastAPI application
     app.include_router(router)
