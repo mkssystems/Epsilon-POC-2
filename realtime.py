@@ -9,6 +9,8 @@ from schemas import PlayerStatus, SessionStatus
 from config import WEBSOCKET_INACTIVITY_TIMEOUT, WEBSOCKET_PING_ONLY_TIMEOUT  # Explicitly imported timeouts
 from game_logic.game_flow_controller import GameFlowController
 from fastapi import APIRouter
+import time  # Explicitly import time for tracking inactivity
+
 
 # Each session_id maps to a list of tuples (client_id, websocket)
 active_connections: Dict[str, List[Dict]] = {}
