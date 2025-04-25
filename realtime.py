@@ -6,7 +6,7 @@ import asyncio
 import json
 from state import session_readiness, lock
 from schemas import PlayerStatus, SessionStatus
-from config import WEBSOCKET_INACTIVITY_TIMEOUT  # Explicitly imported timeout
+from config import WEBSOCKET_INACTIVITY_TIMEOUT, WEBSOCKET_PING_ONLY_TIMEOUT  # Explicitly imported timeouts
 from game_logic.game_flow_controller import GameFlowController
 from fastapi import APIRouter
 
@@ -79,6 +79,8 @@ def mount_websocket_routes(app):
     async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str):
         await connect_to_session(session_id, client_id, websocket)
 
+        last_non_ping_time = time.time()  # Explicitly track last non-ping interaction time
+
         try:
             while True:
                 try:
@@ -100,18 +102,32 @@ def mount_websocket_routes(app):
                     await websocket.send_json({"type": "error", "message": "Invalid JSON format."})
                     continue
 
+                # Explicitly handle ping messages from frontend (heartbeat)
+                if data.get('type') == 'ping':
+                    print(f"[INFO] Received 'ping' from client {client_id} (session: {session_id})")
+                    await websocket.send_json({"type": "pong"})
+                    print(f"[INFO] Sent 'pong' to client {client_id} (session: {session_id})")
+
+                    # Check explicitly if only pings received for too long
+                    if (time.time() - last_non_ping_time) > WEBSOCKET_PING_ONLY_TIMEOUT:
+                        print(f"[INFO] Connection to client {client_id} in session {session_id} explicitly closed due to receiving only pings ({WEBSOCKET_PING_ONLY_TIMEOUT} sec).")
+                        await websocket.close()
+                        await disconnect_from_session(session_id, websocket)
+                        break
+
                 # Explicit handling for specific WebSocket actions
-                if data.get('action') == 'start_game':
+                elif data.get('action') == 'start_game':
                     print(f"[INFO] Received 'start_game' from client {client_id} for session {session_id}")
+                    last_non_ping_time = time.time()  # Reset explicitly due to non-ping interaction
 
                     game_controller = GameFlowController(session_id)
 
                     try:
                         game_controller.start_game()
-                      
+
                         # Broadcast explicitly to all connected players
                         await broadcast_game_started(session_id)
-                      
+
                         # Send confirmation explicitly back to initiating client
                         await websocket.send_json({
                             "type": "game_started",
@@ -125,13 +141,8 @@ def mount_websocket_routes(app):
                         await websocket.send_json({"type": "error", "message": f"Error starting game: {str(e)}"})
                         print(f"[ERROR] Error starting game for session {session_id}: {str(e)}")
 
-                # Explicitly handle ping messages from frontend (heartbeat)
-                elif data.get('type') == 'ping':
-                    print(f"[INFO] Received 'ping' from client {client_id} (session: {session_id})")
-                    await websocket.send_json({"type": "pong"})
-                    print(f"[INFO] Sent 'pong' to client {client_id} (session: {session_id})")
-
                 else:
+                    last_non_ping_time = time.time()  # Reset explicitly due to unknown but non-ping interaction
                     # Handle unknown actions explicitly or send default response
                     await websocket.send_json({"type": "error", "message": "Unknown action provided."})
 
