@@ -72,10 +72,11 @@ async def broadcast_character_released(session_id: str, client_id: str, entity_i
 
 
 
-# WebSocket endpoint to include in main FastAPI app
-def mount_websocket_routes(app):
-    from fastapi import APIRouter
+from fastapi import APIRouter
+import json
+from game_logic.game_flow_controller import GameFlowController
 
+def mount_websocket_routes(app):
     router = APIRouter()
 
     @router.websocket("/ws/{session_id}/{client_id}")
@@ -83,7 +84,54 @@ def mount_websocket_routes(app):
         await connect_to_session(session_id, client_id, websocket)
         try:
             while True:
-                await websocket.receive_text()  # Keep alive
+                # Explicitly wait for incoming JSON messages from the frontend
+                message_text = await websocket.receive_text()
+
+                # Parse incoming message explicitly to JSON
+                try:
+                    data = json.loads(message_text)
+                except json.JSONDecodeError:
+                    await websocket.send_json({"type": "error", "message": "Invalid JSON format."})
+                    continue
+
+                # Explicit handling for specific WebSocket actions
+                if data.get('action') == 'start_game':
+                    # Handle 'start_game' action explicitly
+                    print(f"[INFO] Received 'start_game' from client {client_id} for session {session_id}")
+
+                    # Instantiate game logic controller explicitly and start the game
+                    game_controller = GameFlowController(session_id)
+
+                    try:
+                        game_controller.start_game()
+
+                        # Broadcast explicitly to all connected players
+                        await broadcast_game_started(session_id)
+
+                        # Send confirmation explicitly back to initiating client
+                        await websocket.send_json({
+                            "type": "game_started",
+                            "session_id": session_id,
+                            "message": "Game has started successfully."
+                        })
+
+                        print(f"[INFO] Game started successfully for session: {session_id}")
+
+                    except Exception as e:
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": f"Error starting game: {str(e)}"
+                        })
+
+                        print(f"[ERROR] Error starting game for session {session_id}: {str(e)}")
+
+                else:
+                    # Handle other actions or send default response
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Unknown action provided."
+                    })
+
         except WebSocketDisconnect:
             await disconnect_from_session(session_id, websocket)
 
