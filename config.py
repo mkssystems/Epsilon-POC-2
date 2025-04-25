@@ -12,3 +12,5 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Explicit WebSocket timeout parameter (in seconds)
 WEBSOCKET_INACTIVITY_TIMEOUT = 600  # 10 minutes
 
+# Explicit timeout for only "pings"
+WEBSOCKET_PING_ONLY_TIMEOUT = 1800  # 30 minutes
