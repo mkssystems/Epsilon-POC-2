@@ -1,7 +1,7 @@
 # utils/db_utils.py
 
 from sqlalchemy.orm import Session
-from models.game_state_db import GameStateDB
+from game_logic.models.game_state_db import GameStateDB
 from game_logic.data.game_state import GameState, asdict
 from config import SessionLocal
 
