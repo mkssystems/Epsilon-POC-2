@@ -4,44 +4,49 @@ from sqlalchemy.orm import Session
 from game_logic.models.game_state_db import GameStateDB
 from game_logic.data.game_state import GameState, asdict
 from config import SessionLocal
+import json
 
-
-# Function explicitly saving/updating GameState to database
 def save_game_state_to_db(session: Session, game_state: GameState):
-    state_dict = asdict(game_state)  # Explicit conversion to dict suitable for JSON serialization
+    state_dict = asdict(game_state)
     session_id = game_state.session_id
 
-    # Retrieve existing entry explicitly by session_id
-    db_entry = session.query(GameStateDB).get(session_id)
+    # Explicitly retrieve existing entry safely
+    db_entry = session.query(GameStateDB).filter_by(session_id=session_id).first()
 
     if db_entry:
-        # Update explicitly if entry already exists
         db_entry.game_state = state_dict
     else:
-        # Create explicitly a new DB entry if not existing
         db_entry = GameStateDB(session_id=session_id, game_state=state_dict)
         session.add(db_entry)
 
-    session.commit()  # Explicitly persist changes to the database
+    try:
+        session.commit()
+        print(f"[INFO] Game state explicitly saved successfully for session_id={session_id}")
+    except Exception as e:
+        session.rollback()
+        print(f"[ERROR] Failed to explicitly save game state: {e}")
 
-# Explicitly returns a new active database session
 def get_db_session() -> Session:
     return SessionLocal()
 
-# Explicitly loads existing GameState or creates a new one if not found
 def load_initial_game_state(session: Session, session_id: str) -> GameState:
-    # Retrieve existing entry explicitly by session_id
-    db_entry = session.query(GameStateDB).get(session_id)
+    db_entry = session.query(GameStateDB).filter_by(session_id=session_id).first()
 
     if db_entry:
-        # Explicitly reconstruct GameState from stored dict
         game_state_dict = db_entry.game_state
         game_state = GameState(**game_state_dict)
     else:
-        # Explicitly create new GameState if it doesn't exist
-        game_state = GameState(session_id=session_id, phase=None, turn_number=0)
+        # Explicitly handle initializing TurnInfo and PhaseInfo to avoid None values issues
+        game_state = GameState(
+            session_id=session_id,
+            turn=None,  # will be explicitly populated later
+            phase=None,  # will be explicitly populated later
+            entities=[],
+            labyrinth={}
+        )
         new_db_entry = GameStateDB(session_id=session_id, game_state=asdict(game_state))
         session.add(new_db_entry)
         session.commit()
+        print(f"[INFO] Explicitly initialized new game state entry for session_id={session_id}")
 
     return game_state
