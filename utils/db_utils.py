@@ -4,18 +4,20 @@ from game_logic.data.game_state import GameState, asdict
 from config import SessionLocal
 import json
 from datetime import datetime
+from enum import Enum  # Explicitly import Enum class
 
-# Explicit helper function to convert datetime to string
+# Explicit helper function to convert datetime and enum to string
 def json_serializer(obj):
     if isinstance(obj, datetime):
         return obj.isoformat()
+    if isinstance(obj, Enum):
+        return obj.value  # Explicitly serialize enums by their value
     raise TypeError(f"Type {type(obj)} not serializable")
 
 def save_game_state_to_db(session: Session, game_state: GameState):
     state_dict = asdict(game_state)
     session_id = game_state.session_id
 
-    # Explicitly retrieve existing entry safely
     db_entry = session.query(GameStateDB).filter_by(session_id=session_id).first()
 
     if db_entry:
