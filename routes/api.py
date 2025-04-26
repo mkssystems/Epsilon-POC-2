@@ -15,18 +15,18 @@ from realtime import broadcast_game_started
 from models import Entity, SessionPlayerCharacter
 from realtime import broadcast_character_selected
 from realtime import broadcast_character_released
-
 from game_logic.models.game_state_db import GameStateDB
-
 from db.session import get_db  # Your existing DB session handler explicitly
+from game_logic.game_flow_controller import GameFlowController
 
 
 router = APIRouter()
 
 @router.post("/api/game_sessions/{session_id}/start_game")
 async def start_game(session_id: str):
-    await broadcast_game_started(session_id)
-    return {"message": "Game started broadcast sent"}
+    controller = GameFlowController(session_id)
+    controller.start_game()  # Explicitly handles initialization and broadcasting internally
+    return {"message": "Game started successfully"}
 
 @router.get('/api/game_sessions')
 async def get_game_sessions(db: Session = Depends(get_db)):
