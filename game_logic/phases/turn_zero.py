@@ -2,11 +2,13 @@
 from datetime import datetime
 from game_logic.data.game_state import GamePhaseName, TurnInfo, PhaseInfo, Entity, GameState
 from utils.db_utils import save_game_state_to_db
+from realtime import broadcast_game_started  # explicitly import broadcasting function
+import asyncio  # explicitly required for asynchronous calls
 
 def execute_turn_zero(db_session, game_state: GameState):
     """
     Explicitly initializes game state for Turn 0, populating it with mock data,
-    and explicitly saves it to the database.
+    explicitly saves it to the database, and broadcasts the 'game started' event.
 
     Args:
         db_session: SQLAlchemy database session.
@@ -46,4 +48,7 @@ def execute_turn_zero(db_session, game_state: GameState):
     # Explicitly save the initialized state to the database
     save_game_state_to_db(db_session, game_state)
 
-    print(f"[INFO] Turn 0 explicitly initialized and saved for session {game_state.session_id}")
+    # Explicitly broadcast "game started" event asynchronously
+    asyncio.create_task(broadcast_game_started(game_state.session_id))
+
+    print(f"[INFO] Turn 0 explicitly initialized, saved, and broadcasted for session {game_state.session_id}")
