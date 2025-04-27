@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Game Sessions</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f7f7f7; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 8px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
+    th { background-color: #4CAF50; color: white; }
+    .sessions, .actions { 
+      margin-bottom: 15px; 
+      padding: 10px; 
+      background-color: #fff; 
+      border: 1px solid #ddd; 
+      border-radius: 5px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    }
+    button { margin: 5px; padding: 6px; border-radius: 3px; border: none; cursor: pointer; }
+    .refresh { background-color: #4CAF50; color: white; }
+    .destroy { background-color: #f44336; color: white; }
+    .refresh:hover { background-color: #45a049; }
+    .destroy:hover { background-color: #e53935; }
+    .client-entry { margin-left: 15px; padding: 3px; }
+  </style>
+</head>
+<body>
+  <h1>Manage Game Sessions</h1>
+
+  <div class="actions">
+    <button class="refresh" onclick="fetchGameSessions()">Refresh Sessions List</button>
+    <button class="destroy" onclick="destroyAllSessions()">Destroy All Sessions</button>
+  </div>
+
+  <div class="sessions">
+    <table id="sessions-table">
+      <thead>
+        <tr>
+          <th>Session ID</th>
+          <th>Creator</th>
+          <th>Map Size</th>
+          <th>Max Players</th>
+          <th>Created At</th>
+          <th>Connected Clients</th>
+        </tr>
+      </thead>
+      <tbody id="sessions-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function fetchGameSessions() {
+      const res = await fetch("/api/game_sessions");
+      const { sessions } = await res.json();
+      const tbody = document.getElementById("sessions-body");
+      tbody.innerHTML = "";
+      sessions.forEach(async session => {
+        const resClients = await fetch(`/api/game_sessions/${session.id}/clients`);
+        const clientsData = await resClients.json();
+        const clientsList = clientsData.clients.map((c, idx) => `<div class="client-entry">${idx + 1}. ID: ${c.client_id}, Connected: ${new Date(c.connected_at).toLocaleString()}</div>`).join('') || 'No clients connected';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${session.id}</td>
+          <td>${session.creator_client_id}</td>
+          <td>${session.size}</td>
+          <td>${session.max_players}</td>
+          <td>${new Date(session.created_at).toLocaleString()}</td>
+          <td>${clientsList}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function destroyAllSessions() {
+      if (!confirm('Are you sure you want to destroy all sessions?')) return;
+      const res = await fetch("/api/game_sessions/destroy_all", { method: "DELETE" });
+      if (!res.ok) return alert("Failed to destroy sessions.");
+      fetchGameSessions();
+    }
+
+    window.onload = fetchGameSessions;
+  </script>
+</body>
+</html>
