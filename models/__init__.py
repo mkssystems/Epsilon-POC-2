@@ -9,3 +9,4 @@ from .skills import Skill
 from .specials import Special
 from .tile import Tile
 from .session_player_character import SessionPlayerCharacter
+from .map_object import MapObject  # explicitly added
