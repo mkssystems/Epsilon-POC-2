@@ -40,10 +40,23 @@ def initialize_phase_info(game_state):
         started_at=datetime.utcnow()
     )
 
-# Explicitly define initial labyrinth layout by loading tiles and setting their initial revealed status to False
+# Explicitly define initial labyrinth layout by loading tiles based on labyrinth_id
 def define_initial_labyrinth(db_session, game_state):
-    tile_records = db_session.query(Tile).filter(Tile.labyrinth_id == game_state.session_id).all()
+    # First, explicitly fetch the GameSession record to retrieve the correct labyrinth_id
+    session_record = db_session.query(GameSession).filter(GameSession.id == game_state.session_id).first()
 
+    # Ensure the session exists explicitly
+    if not session_record:
+        raise ValueError(f"[ERROR] No game session found with id {game_state.session_id}")
+
+    # Now, correctly use labyrinth_id from the session to fetch tiles
+    tile_records = db_session.query(Tile).filter(Tile.labyrinth_id == session_record.labyrinth_id).all()
+
+    # Explicitly handle the case if no tiles are found for this labyrinth_id
+    if not tile_records:
+        raise ValueError(f"[ERROR] No tiles found for labyrinth_id {session_record.labyrinth_id}")
+
+    # Initialize the labyrinth layout explicitly
     labyrinth_layout = {}
     for tile in tile_records:
         labyrinth_layout[str(tile.id)] = {
@@ -54,9 +67,11 @@ def define_initial_labyrinth(db_session, game_state):
             "revealed": False
         }
 
+    # Assign explicitly initialized labyrinth to game state
     game_state.labyrinth = labyrinth_layout
 
-    print(f"[INFO] Labyrinth explicitly initialized with {len(tile_records)} tiles for session {game_state.session_id}")
+    print(f"[INFO] Labyrinth explicitly initialized with {len(tile_records)} tiles for labyrinth {session_record.labyrinth_id}")
+
 
 # Explicitly define initial placement using scenario-specific logic
 def define_initial_placement(db_session, game_state):
