@@ -5,13 +5,14 @@ from models.game_entities import Entity
 from models.equipment import Equipment
 from models.skills import Skill
 from models.specials import Special
+from models.map_object import MapObject  # explicitly import the new MapObject model
 
-def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
+def load_data(engine, df_entities, df_equipment, df_skills, df_specials, df_map_objects):
     session = Session(bind=engine)
 
     try:
-        # Load entities into the 'entities' table first (CORRECTED)
-        for index, row in df_entities.iterrows():
+        # Load entities into the 'entities' table
+        for _, row in df_entities.iterrows():
             entity = Entity(
                 id=row['id'],
                 name=row['name'],
@@ -25,15 +26,10 @@ def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
             session.add(entity)
 
         session.commit()
+        print("Entities successfully inserted into the database.")
 
-        print("Entities inserted:")
-        for index, row in df_entities.iterrows():
-            print(f"Inserted Entity ID: {row['id']}")
-
-        # Load equipment
-        for index, row in df_equipment.iterrows():
-            print(f"Inserting Equipment with entity_id: {row['entity_id']}")
-
+        # Load equipment linked to entities
+        for _, row in df_equipment.iterrows():
             equipment = Equipment(
                 id=row['id'],
                 entity_id=row['entity_id'],
@@ -42,8 +38,8 @@ def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
             )
             session.add(equipment)
 
-        # Load skills
-        for index, row in df_skills.iterrows():
+        # Load skills linked to entities
+        for _, row in df_skills.iterrows():
             skill = Skill(
                 id=row['id'],
                 entity_id=row['entity_id'],
@@ -52,8 +48,8 @@ def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
             )
             session.add(skill)
 
-        # Load specials
-        for index, row in df_specials.iterrows():
+        # Load specials linked to entities
+        for _, row in df_specials.iterrows():
             special = Special(
                 id=row['id'],
                 entity_id=row['entity_id'],
@@ -61,12 +57,22 @@ def load_data(engine, df_entities, df_equipment, df_skills, df_specials):
             )
             session.add(special)
 
+        # Explicitly load map objects
+        for _, row in df_map_objects.iterrows():
+            map_object = MapObject(
+                id=row['id'],
+                name=row['name'],
+                description=row['description'],
+                scenario=row['scenario']
+            )
+            session.add(map_object)
+
         session.commit()
-        print("Data successfully loaded into the database.")
+        print("Equipment, skills, specials, and map objects successfully loaded into the database.")
 
     except Exception as e:
         session.rollback()
-        print(f"Error loading data: {e}")
+        print(f"Error occurred during data loading: {e}")
 
     finally:
         session.close()
