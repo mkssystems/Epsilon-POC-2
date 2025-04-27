@@ -5,7 +5,12 @@ from utils.db_utils import save_game_state_to_db
 from realtime import broadcast_session_update
 import asyncio
 from models.game_session import GameSession
-from models.tile import Tile
+from game_logic.scenarios.epsilon267_fulcrum_incident.epsilon267_fulcrum_incident import (
+    place_players,
+    place_enemies,
+    place_npcs
+)
+from models.game_entities import Entity as DbEntity
 
 # Explicitly retrieve scenario name from the database
 def retrieve_scenario_name(db_session, session_id):
@@ -28,10 +33,6 @@ def initialize_turn_info(game_state):
 def initialize_phase_info(game_state):
     pass
 
-# Placeholder for defining initial entities
-def define_initial_entities(game_state):
-    pass
-
 # Explicitly define initial labyrinth layout by loading tiles and setting their initial revealed status to False
 def define_initial_labyrinth(db_session, game_state):
     tile_records = db_session.query(Tile).filter(Tile.labyrinth_id == game_state.session_id).all()
@@ -49,6 +50,27 @@ def define_initial_labyrinth(db_session, game_state):
     game_state.labyrinth = labyrinth_layout
 
     print(f"[INFO] Labyrinth explicitly initialized with {len(tile_records)} tiles for session {game_state.session_id}")
+
+# Explicitly define initial entities using scenario-specific logic
+def define_initial_entities(db_session, game_state):
+    scenario_name = retrieve_scenario_name(db_session, game_state.session_id)
+
+    if scenario_name == "Epsilon267-Fulcrum Incident":
+        player_entities = db_session.query(DbEntity).filter(DbEntity.scenario == scenario_name, DbEntity.type == "player").all()
+        enemy_entities = db_session.query(DbEntity).filter(DbEntity.scenario == scenario_name, DbEntity.type == "enemy").all()
+        npc_entities = db_session.query(DbEntity).filter(DbEntity.scenario == scenario_name, DbEntity.type == "npc").all()
+
+        player_positions, player_tile = place_players(db_session, game_state.session_id, player_entities)
+        enemy_positions, boss_tile = place_enemies(db_session, game_state.session_id, enemy_entities, player_tile)
+        npc_positions = place_npcs(db_session, game_state.session_id, npc_entities, boss_tile)
+
+        # Merge all entity positions
+        all_positions = {**player_positions, **enemy_positions, **npc_positions}
+        game_state.entities = all_positions
+
+        print(f"[INFO] Entities explicitly positioned using scenario-specific logic for '{scenario_name}'")
+    else:
+        print(f"[WARN] Scenario '{scenario_name}' not explicitly handled for entity placement.")
 
 # Placeholder for saving initialized state
 def save_initialized_state(db_session, game_state):
