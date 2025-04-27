@@ -27,13 +27,18 @@ def broadcast_game_started(session_id, scenario_name):
     }
     asyncio.create_task(broadcast_session_update(session_id, message))
 
-# Placeholder for initializing turn information
+# Explicitly initialize turn information
 def initialize_turn_info(game_state):
-    pass
+    game_state.turn = TurnInfo(number=0, started_at=datetime.utcnow())
 
-# Placeholder for initializing phase information
+# Explicitly initialize phase information
 def initialize_phase_info(game_state):
-    pass
+    game_state.phase = PhaseInfo(
+        name=GamePhaseName.TURN_0,
+        number=None,
+        is_end_turn=False,
+        started_at=datetime.utcnow()
+    )
 
 # Explicitly define initial labyrinth layout by loading tiles and setting their initial revealed status to False
 def define_initial_labyrinth(db_session, game_state):
@@ -85,6 +90,8 @@ def execute_turn_zero(db_session, game_state: GameState):
     scenario_name = retrieve_scenario_name(db_session, game_state.session_id)
     broadcast_game_started(game_state.session_id, scenario_name)
 
+    initialize_turn_info(game_state)
+    initialize_phase_info(game_state)
     define_initial_labyrinth(db_session, game_state)
     define_initial_placement(db_session, game_state)
 
