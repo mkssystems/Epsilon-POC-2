@@ -44,4 +44,3 @@ def place_npcs(db_session, labyrinth_id, npc_records, boss_tile):
     npc_positions = {npc.id: str(npc_tile.id) for npc in npc_records}
 
     return npc_positions
-
