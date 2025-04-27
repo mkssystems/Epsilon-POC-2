@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Labyrinth Generator</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f7f7f7; }
+    .tile-img { width: 80px; height: 80px; object-fit: cover; border: 1px solid #aaa; }
+    .row { display: flex; }
+    #map { margin-top: 20px; }
+    .controls, .actions { 
+      margin-bottom: 15px; 
+      padding: 10px; 
+      background-color: #fff; 
+      border: 1px solid #ddd; 
+      border-radius: 5px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    }
+    input, button { margin: 5px; padding: 6px; border-radius: 3px; border: 1px solid #ccc; }
+    button { background-color: #4CAF50; color: white; cursor: pointer; border: none; }
+    button:hover { background-color: #45a049; }
+  </style>
+</head>
+<body>
+  <h1>Test Labyrinth Generator</h1>
+
+  <div class="controls">
+    <label>Map Size (4-10):</label>
+    <input type="number" id="size" min="4" max="10" value="7">
+    <label>Seed (optional):</label>
+    <input type="text" id="seed">
+  </div>
+
+  <div class="actions">
+    <button onclick="generateLabyrinth(false)">Generate Random Map</button>
+    <button onclick="generateLabyrinth(true)">Generate from Seed</button>
+  </div>
+
+  <div id="display-seed"></div>
+  <div id="map"></div>
+
+  <script>
+    async function generateLabyrinth(useSeed) {
+      const size = document.getElementById("size").value;
+      const seedInput = document.getElementById("seed").value;
+      const seed = useSeed && seedInput ? seedInput : undefined;
+
+      const response = await fetch("/generate-labyrinth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ size, seed })
+      });
+      if (!response.ok) return alert("Error generating labyrinth!");
+      const data = await response.json();
+      document.getElementById("display-seed").innerText = `Seed used: ${data.seed}`;
+      visualizeMap(data.tiles, size);
+    }
+
+    function visualizeMap(tiles, size) {
+      const map = document.getElementById("map");
+      map.innerHTML = "";
+      for (let y = 0; y < size; y++) {
+        const row = document.createElement("div");
+        row.className = "row";
+        for (let x = 0; x < size; x++) {
+          const tile = tiles.find(t => t.x === x && t.y === y);
+          const img = document.createElement("img");
+          img.className = "tile-img";
+          img.src = `/tiles/${tile.image}`;
+          row.appendChild(img);
+        }
+        map.appendChild(row);
+      }
+    }
+  </script>
+</body>
+</html>
