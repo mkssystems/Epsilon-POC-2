@@ -10,6 +10,7 @@ from game_logic.scenarios.epsilon267_fulcrum_incident.epsilon267_fulcrum_inciden
     place_enemies,
     place_npcs
 )
+from game_logic.scenarios.epsilon267_fulcrum_incident.map_objects_placement import place_map_objects
 from models.game_entities import Entity as DbEntity
 from models.tile import Tile
 
@@ -52,8 +53,8 @@ def define_initial_labyrinth(db_session, game_state):
 
     print(f"[INFO] Labyrinth explicitly initialized with {len(tile_records)} tiles for session {game_state.session_id}")
 
-# Explicitly define initial entities using scenario-specific logic
-def define_initial_entities(db_session, game_state):
+# Explicitly define initial placement using scenario-specific logic
+def define_initial_placement(db_session, game_state):
     scenario_name = retrieve_scenario_name(db_session, game_state.session_id)
 
     if scenario_name == "Epsilon267-Fulcrum Incident":
@@ -65,13 +66,15 @@ def define_initial_entities(db_session, game_state):
         enemy_positions, boss_tile = place_enemies(db_session, game_state.session_id, enemy_entities, player_tile)
         npc_positions = place_npcs(db_session, game_state.session_id, npc_entities, boss_tile)
 
-        # Merge all entity positions
         all_positions = {**player_positions, **enemy_positions, **npc_positions}
         game_state.entities = all_positions
 
-        print(f"[INFO] Entities explicitly positioned using scenario-specific logic for '{scenario_name}'")
+        map_object_positions = place_map_objects(db_session, game_state.session_id, scenario_name)
+        game_state.map_objects = map_object_positions
+
+        print(f"[INFO] Entities and map objects explicitly positioned using scenario-specific logic for '{scenario_name}'")
     else:
-        print(f"[WARN] Scenario '{scenario_name}' not explicitly handled for entity placement.")
+        print(f"[WARN] Scenario '{scenario_name}' not explicitly handled for entity and map object placement.")
 
 # Placeholder for saving initialized state
 def save_initialized_state(db_session, game_state):
@@ -79,13 +82,10 @@ def save_initialized_state(db_session, game_state):
 
 # Main procedural orchestrating function for Turn 0 initialization
 def execute_turn_zero(db_session, game_state: GameState):
-    # Retrieve scenario name explicitly
     scenario_name = retrieve_scenario_name(db_session, game_state.session_id)
-
-    # Explicitly broadcast the scenario start event
     broadcast_game_started(game_state.session_id, scenario_name)
 
     define_initial_labyrinth(db_session, game_state)
-    define_initial_entities(db_session, game_state)
+    define_initial_placement(db_session, game_state)
 
     print(f"[INFO] Turn 0 explicitly started with scenario '{scenario_name}' for session {game_state.session_id}")
