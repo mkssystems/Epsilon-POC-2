@@ -5,12 +5,13 @@ from utils.db_utils import save_game_state_to_db
 from realtime import broadcast_session_update
 import asyncio
 from models.game_session import GameSession
-from game_logic.scenarios.epsilon267_fulcrum_incident.epsilon267_fulcrum_incident import (
+from game_logic.scenarios.epsilon267_fulcrum_incident.epsilon267_fulcrum_incident_entities_placement import (
     place_players,
     place_enemies,
     place_npcs
 )
 from models.game_entities import Entity as DbEntity
+from models.tile import Tile
 
 # Explicitly retrieve scenario name from the database
 def retrieve_scenario_name(db_session, session_id):
@@ -83,5 +84,8 @@ def execute_turn_zero(db_session, game_state: GameState):
 
     # Explicitly broadcast the scenario start event
     broadcast_game_started(game_state.session_id, scenario_name)
+
+    define_initial_labyrinth(db_session, game_state)
+    define_initial_entities(db_session, game_state)
 
     print(f"[INFO] Turn 0 explicitly started with scenario '{scenario_name}' for session {game_state.session_id}")
