@@ -400,18 +400,48 @@ async def all_characters(session_id: UUID, db: Session = Depends(get_db)):
 
     return {"all_characters": characters}
 
-# routes/api.py (Corrected FastAPI implementation)
 @router.get('/api/game-state/{session_id}')
-async def get_game_state(session_id: str, db: Session = Depends(get_db)):
-    # Explicitly retrieve game state by session_id from the database
-    db_entry = db.query(GameStateDB).filter(GameStateDB.session_id == session_id).first()
+async def get_full_game_state(session_id: UUID, db: Session = Depends(get_db)):
+    """
+    Retrieve and explicitly return the full game state for a given session ID.
 
-    if not db_entry:
-        # Explicitly handle case where session_id does not exist
-        raise HTTPException(status_code=404, detail="Session not found")
+    Args:
+        session_id (UUID): Unique identifier for the game session.
+        db (Session): Database session dependency injected by FastAPI.
 
-    # Explicitly return the serialized game state as JSON
-    return db_entry.game_state
+    Returns:
+        dict: Full serialized game state including labyrinth details,
+              entities positions, and map objects.
+              
+    Raises:
+        HTTPException: 404 if the game state for provided session ID is not found.
+    """
+    try:
+        # Explicitly convert UUID to string for consistent DB querying
+        session_id_str = str(session_id)
+
+        # Explicitly query GameStateDB for the provided session_id
+        game_state_entry = db.query(GameStateDB).filter(
+            GameStateDB.session_id == session_id_str
+        ).first()
+
+        # Explicitly handle the case where no game state is found
+        if not game_state_entry:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Game state for session '{session_id_str}' not found."
+            )
+
+        # Explicitly return the game state as a parsed JSON
+        return game_state_entry.game_state
+
+    except Exception as e:
+        # Explicitly handle unexpected exceptions gracefully
+        raise HTTPException(
+            status_code=500,
+            detail=f"An unexpected error occurred: {str(e)}"
+        )
+
 
 
 
