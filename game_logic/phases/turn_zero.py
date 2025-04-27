@@ -81,9 +81,14 @@ def define_initial_placement(db_session, game_state):
     else:
         print(f"[WARN] Scenario '{scenario_name}' not explicitly handled for entity and map object placement.")
 
-# Placeholder for saving initialized state
+# Explicitly save initialized state to the database
 def save_initialized_state(db_session, game_state):
-    pass
+    try:
+        save_game_state_to_db(db_session, game_state)
+        print(f"[INFO] Initialized game state explicitly saved for session {game_state.session_id}")
+    except Exception as e:
+        print(f"[ERROR] Failed to explicitly save initialized game state for session {game_state.session_id}: {e}")
+        raise
 
 # Main procedural orchestrating function for Turn 0 initialization
 def execute_turn_zero(db_session, game_state: GameState):
@@ -94,5 +99,6 @@ def execute_turn_zero(db_session, game_state: GameState):
     initialize_phase_info(game_state)
     define_initial_labyrinth(db_session, game_state)
     define_initial_placement(db_session, game_state)
+    save_initialized_state(db_session, game_state)
 
     print(f"[INFO] Turn 0 explicitly started with scenario '{scenario_name}' for session {game_state.session_id}")
