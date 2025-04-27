@@ -14,7 +14,8 @@
     .row { display: flex; }
     .tile-img { width: 80px; height: 80px; object-fit: cover; border: 1px solid #aaa; position: relative; }
     .marker { position: absolute; bottom: 0; right: 0; background-color: rgba(255,0,0,0.8); color: white; padding: 2px; font-size: 10px; }
-    #map { margin-top: 20px; }
+    #map, #json-state { margin-top: 20px; }
+    pre { background-color: #fff; padding: 10px; border-radius: 5px; border: 1px solid #ddd; overflow-x: auto; }
   </style>
 </head>
 <body>
@@ -33,8 +34,12 @@
   </table>
 
   <div id="map"></div>
+  <button onclick="toggleJsonState()">Toggle Game State JSON</button>
+  <div id="json-state" style="display:none;"><pre id="json-content"></pre></div>
 
   <script>
+    let currentState = null;
+
     async function fetchGameSessions() {
       const res = await fetch("/api/game_sessions");
       const { sessions } = await res.json();
@@ -53,10 +58,12 @@
     }
 
     async function displaySessionMap(sessionId) {
-      const res = await fetch(`/api/game_sessions/${sessionId}/full_state`);
+      const res = await fetch(`/api/game-state/${sessionId}`);
       if (!res.ok) return alert("Failed to load session details.");
-      const state = await res.json();
-      visualizeSessionMap(state);
+      currentState = await res.json();
+      visualizeSessionMap(currentState);
+      document.getElementById("json-content").textContent = JSON.stringify(currentState, null, 2);
+      document.getElementById("json-state").style.display = 'none';
     }
 
     function visualizeSessionMap(state) {
@@ -94,6 +101,11 @@
         }
         mapDiv.appendChild(rowDiv);
       }
+    }
+
+    function toggleJsonState() {
+      const jsonStateDiv = document.getElementById("json-state");
+      jsonStateDiv.style.display = jsonStateDiv.style.display === 'none' ? 'block' : 'none';
     }
 
     window.onload = fetchGameSessions;
