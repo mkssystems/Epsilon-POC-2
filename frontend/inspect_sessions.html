@@ -27,19 +27,16 @@
         <th>Session ID</th>
         <th>Creator</th>
         <th>Created At</th>
-        <th>Action</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody id="sessions-body"></tbody>
   </table>
 
   <div id="map"></div>
-  <button onclick="toggleJsonState()">Toggle Game State JSON</button>
   <div id="json-state" style="display:none;"><pre id="json-content"></pre></div>
 
   <script>
-    let currentState = null;
-
     async function fetchGameSessions() {
       const res = await fetch("/api/game_sessions");
       const { sessions } = await res.json();
@@ -51,7 +48,10 @@
           <td>${session.id}</td>
           <td>${session.creator_client_id}</td>
           <td>${new Date(session.created_at).toLocaleString()}</td>
-          <td><button onclick="displaySessionMap('${session.id}')">Display Map</button></td>
+          <td>
+            <button onclick="displaySessionMap('${session.id}')">Display Map</button>
+            <button onclick="displaySessionJson('${session.id}')">View JSON</button>
+          </td>
         `;
         tbody.appendChild(row);
       });
@@ -60,10 +60,18 @@
     async function displaySessionMap(sessionId) {
       const res = await fetch(`/api/game-state/${sessionId}`);
       if (!res.ok) return alert("Failed to load session details.");
-      currentState = await res.json();
-      visualizeSessionMap(currentState);
-      document.getElementById("json-content").textContent = JSON.stringify(currentState, null, 2);
+      const state = await res.json();
+      visualizeSessionMap(state);
       document.getElementById("json-state").style.display = 'none';
+    }
+
+    async function displaySessionJson(sessionId) {
+      const res = await fetch(`/api/game-state/${sessionId}`);
+      if (!res.ok) return alert("Failed to load session details.");
+      const state = await res.json();
+      document.getElementById("json-content").textContent = JSON.stringify(state, null, 2);
+      document.getElementById("json-state").style.display = 'block';
+      document.getElementById("map").innerHTML = "";
     }
 
     function visualizeSessionMap(state) {
@@ -101,11 +109,6 @@
         }
         mapDiv.appendChild(rowDiv);
       }
-    }
-
-    function toggleJsonState() {
-      const jsonStateDiv = document.getElementById("json-state");
-      jsonStateDiv.style.display = jsonStateDiv.style.display === 'none' ? 'block' : 'none';
     }
 
     window.onload = fetchGameSessions;
