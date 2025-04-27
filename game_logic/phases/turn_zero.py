@@ -2,53 +2,64 @@
 from datetime import datetime
 from game_logic.data.game_state import GamePhaseName, TurnInfo, PhaseInfo, Entity, GameState
 from utils.db_utils import save_game_state_to_db
-from realtime import broadcast_game_started  # explicitly import broadcasting function
-import asyncio  # explicitly required for asynchronous calls
+from realtime import broadcast_session_update
+import asyncio
+from models.game_session import GameSession
+from models.tile import Tile
 
-def execute_turn_zero(db_session, game_state: GameState):
-    """
-    Explicitly initializes game state for Turn 0, populating it with mock data,
-    explicitly saves it to the database, and broadcasts the 'game started' event.
+# Explicitly retrieve scenario name from the database
+def retrieve_scenario_name(db_session, session_id):
+    session_record = db_session.query(GameSession).filter(GameSession.id == session_id).first()
+    return session_record.scenario_name if session_record else "Unknown Scenario"
 
-    Args:
-        db_session: SQLAlchemy database session.
-        game_state (GameState): Initial game state instance to populate.
-    """
-    current_time = datetime.utcnow()
-
-    # Explicitly initialize the turn information
-    game_state.turn = TurnInfo(
-        number=0,
-        started_at=current_time
-    )
-
-    # Explicitly initialize the phase information
-    game_state.phase = PhaseInfo(
-        name=GamePhaseName.TURN_0,
-        number=None,
-        is_end_turn=False,
-        started_at=current_time
-    )
-
-    # Explicitly define minimal mocked entities for initial setup
-    game_state.entities = [
-        Entity(id="entity_player_1", type="player", position="start_tile", controlled_by_user_id="user_1"),
-        Entity(id="entity_npc_1", type="npc", position="npc_start_tile")
-    ]
-
-    # Explicitly define minimal mocked labyrinth layout
-    game_state.labyrinth = {
-        "tiles": {
-            "start_tile": {"type": "start", "connected_tiles": ["tile_1"]},
-            "npc_start_tile": {"type": "npc_start", "connected_tiles": ["tile_2"]}
-        },
-        "layout": "mocked_layout"
+# Explicitly broadcast game start event asynchronously
+def broadcast_game_started(session_id, scenario_name):
+    message = {
+        "event": "game_started",
+        "scenario_name": scenario_name
     }
+    asyncio.create_task(broadcast_session_update(session_id, message))
 
-    # Explicitly save the initialized state to the database
-    save_game_state_to_db(db_session, game_state)
+# Placeholder for initializing turn information
+def initialize_turn_info(game_state):
+    pass
 
-    # Explicitly broadcast "game started" event asynchronously
-    asyncio.create_task(broadcast_game_started(game_state.session_id))
+# Placeholder for initializing phase information
+def initialize_phase_info(game_state):
+    pass
 
-    print(f"[INFO] Turn 0 explicitly initialized, saved, and broadcasted for session {game_state.session_id}")
+# Placeholder for defining initial entities
+def define_initial_entities(game_state):
+    pass
+
+# Explicitly define initial labyrinth layout by loading tiles and setting their initial revealed status to False
+def define_initial_labyrinth(db_session, game_state):
+    tile_records = db_session.query(Tile).filter(Tile.labyrinth_id == game_state.session_id).all()
+
+    labyrinth_layout = {}
+    for tile in tile_records:
+        labyrinth_layout[str(tile.id)] = {
+            "x": tile.x,
+            "y": tile.y,
+            "type": tile.type,
+            "open_directions": tile.open_directions,
+            "revealed": False
+        }
+
+    game_state.labyrinth = labyrinth_layout
+
+    print(f"[INFO] Labyrinth explicitly initialized with {len(tile_records)} tiles for session {game_state.session_id}")
+
+# Placeholder for saving initialized state
+def save_initialized_state(db_session, game_state):
+    pass
+
+# Main procedural orchestrating function for Turn 0 initialization
+def execute_turn_zero(db_session, game_state: GameState):
+    # Retrieve scenario name explicitly
+    scenario_name = retrieve_scenario_name(db_session, game_state.session_id)
+
+    # Explicitly broadcast the scenario start event
+    broadcast_game_started(game_state.session_id, scenario_name)
+
+    print(f"[INFO] Turn 0 explicitly started with scenario '{scenario_name}' for session {game_state.session_id}")
