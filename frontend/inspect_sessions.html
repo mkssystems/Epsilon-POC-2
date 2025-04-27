@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inspect Sessions</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f7f7f7; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 8px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
+    th { background-color: #4CAF50; color: white; }
+    button { margin: 5px; padding: 6px; border-radius: 3px; border: none; cursor: pointer; background-color: #4CAF50; color: white; }
+    button:hover { background-color: #45a049; }
+    .row { display: flex; }
+    .tile-img { width: 80px; height: 80px; object-fit: cover; border: 1px solid #aaa; position: relative; }
+    .marker { position: absolute; bottom: 0; right: 0; background-color: rgba(255,0,0,0.8); color: white; padding: 2px; font-size: 10px; }
+    #map { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Inspect Sessions</h1>
+
+  <table id="sessions-table">
+    <thead>
+      <tr>
+        <th>Session ID</th>
+        <th>Creator</th>
+        <th>Created At</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="sessions-body"></tbody>
+  </table>
+
+  <div id="map"></div>
+
+  <script>
+    async function fetchGameSessions() {
+      const res = await fetch("/api/game_sessions");
+      const { sessions } = await res.json();
+      const tbody = document.getElementById("sessions-body");
+      tbody.innerHTML = "";
+      sessions.forEach(session => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${session.id}</td>
+          <td>${session.creator_client_id}</td>
+          <td>${new Date(session.created_at).toLocaleString()}</td>
+          <td><button onclick="displaySessionMap('${session.id}')">Display Map</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function displaySessionMap(sessionId) {
+      const res = await fetch(`/api/game_sessions/${sessionId}/full_state`);
+      if (!res.ok) return alert("Failed to load session details.");
+      const state = await res.json();
+      visualizeSessionMap(state);
+    }
+
+    function visualizeSessionMap(state) {
+      const size = Math.sqrt(Object.keys(state.labyrinth).length);
+      const mapDiv = document.getElementById("map");
+      mapDiv.innerHTML = "";
+      for (let y = 0; y < size; y++) {
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "row";
+        for (let x = 0; x < size; x++) {
+          const tile = Object.values(state.labyrinth).find(t => t.x === x && t.y === y);
+          const imgDiv = document.createElement("div");
+          imgDiv.style.position = "relative";
+          const img = document.createElement("img");
+          img.className = "tile-img";
+          img.src = `/tiles/${tile.type}.png`;
+          imgDiv.appendChild(img);
+
+          const markers = [];
+          for (const [id, entity] of Object.entries(state.entities)) {
+            if (entity.position === tile.id) markers.push('E');
+          }
+          for (const [id, obj] of Object.entries(state.map_objects)) {
+            if (obj.position === tile.id) markers.push('O');
+          }
+
+          if (markers.length > 0) {
+            const marker = document.createElement("div");
+            marker.className = "marker";
+            marker.innerText = markers.join(',');
+            imgDiv.appendChild(marker);
+          }
+
+          rowDiv.appendChild(imgDiv);
+        }
+        mapDiv.appendChild(rowDiv);
+      }
+    }
+
+    window.onload = fetchGameSessions;
+  </script>
+</body>
+</html>
