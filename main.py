@@ -60,9 +60,9 @@ def startup():
         df_equipment = pd.read_csv("assets/seed/equipment.csv")
         df_skills = pd.read_csv("assets/seed/skills.csv")
         df_specials = pd.read_csv("assets/seed/specials.csv")
-        df_map_objects = pd.read_csv("assets/seed/map_objects.csv")
+        df_map_object = pd.read_csv("assets/seed/map_objects.csv")
 
-        load_data(engine, df_entities, df_equipment, df_skills, df_specials, df_map_objects)
+        load_data(engine, df_entities, df_equipment, df_skills, df_specials, df_map_object)
 
 
 
