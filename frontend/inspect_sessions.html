@@ -89,9 +89,10 @@
     }
 
     async function displaySessionMap(sessionId, containerId) {
-      const res = await fetch(`/api/game-state/${sessionId}/map`);
+      const res = await fetch(`/api/game-state/${sessionId}/visual-map`);
       if (!res.ok) return alert("Failed to load session map.");
-      const { tiles, size } = await res.json();
+      const { tiles } = await res.json();
+      const size = Math.sqrt(tiles.length);
       const mapDiv = document.getElementById(containerId);
       mapDiv.innerHTML = "";
       for (let y = 0; y < size; y++) {
@@ -108,7 +109,7 @@
           tile.entities.forEach(entity => {
             const marker = document.createElement("div");
             marker.className = "marker";
-            marker.innerText = entity.type.charAt(0).toUpperCase();
+            marker.innerText = entity.charAt(0).toUpperCase();
             imgDiv.appendChild(marker);
           });
           rowDiv.appendChild(imgDiv);
