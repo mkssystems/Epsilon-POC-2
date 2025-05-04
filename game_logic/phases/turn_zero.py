@@ -72,6 +72,7 @@ def define_initial_entity_details(db_session, entities_positions):
 
 # Main procedural orchestrating function for Turn 0 initialization
 def execute_turn_zero(db_session, session_id):
+    # Explicitly ensure correct parameter passing here
     try:
         scenario_name, labyrinth_id, size, seed = retrieve_scenario_details(db_session, session_id)
         print(f"[INFO] Scenario details retrieved successfully: Scenario='{scenario_name}', Labyrinth='{labyrinth_id}', Size={size}, Seed='{seed}'")
