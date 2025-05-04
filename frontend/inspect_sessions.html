@@ -74,6 +74,26 @@
       document.getElementById("map").innerHTML = "";
     }
 
+    function getImageName(tile_type, directions) {
+      directions = directions.sort();
+      if (tile_type === "crossroad") {
+        return "tile_crossroad.png";
+      } else if (tile_type === "corridor") {
+        return directions.join('') === "NS" ? "tile_corridor_NS.png" : "tile_corridor_EW.png";
+      } else if (tile_type === "turn") {
+        if (directions.join('') === "EN") return "tile_turn_NE.png";
+        if (directions.join('') === "NW") return "tile_turn_NW.png";
+        if (directions.join('') === "ES") return "tile_turn_SE.png";
+        if (directions.join('') === "SW") return "tile_turn_SW.png";
+      } else if (tile_type === "t_section") {
+        const missing = ["N", "E", "S", "W"].filter(dir => !directions.includes(dir))[0];
+        return `tile_t_section_${missing}.png`;
+      } else if (tile_type === "dead_end") {
+        return `tile_dead_end_${directions[0]}.png`;
+      }
+      return "tile_crossroad.png";
+    }
+
     function visualizeSessionMap(state) {
       const size = Math.sqrt(Object.keys(state.labyrinth).length);
       const mapDiv = document.getElementById("map");
@@ -87,16 +107,14 @@
           imgDiv.style.position = "relative";
           const img = document.createElement("img");
           img.className = "tile-img";
-          img.src = `/tiles/${tile.type}.png`;
+          img.src = `/tiles/${getImageName(tile.type, tile.open_directions)}`;
           imgDiv.appendChild(img);
 
           const markers = [];
-          for (const [id, entity] of Object.entries(state.entities)) {
+          for (const entity of Object.values(state.entities))
             if (entity.position === tile.id) markers.push('E');
-          }
-          for (const [id, obj] of Object.entries(state.map_objects)) {
+          for (const obj of Object.values(state.map_objects))
             if (obj.position === tile.id) markers.push('O');
-          }
 
           if (markers.length > 0) {
             const marker = document.createElement("div");
@@ -104,7 +122,6 @@
             marker.innerText = markers.join(',');
             imgDiv.appendChild(marker);
           }
-
           rowDiv.appendChild(imgDiv);
         }
         mapDiv.appendChild(rowDiv);
