@@ -24,19 +24,22 @@ def get_tile_type_from_directions(directions):
         return "crossroad"
 
 def get_image_filename(tile_type, directions):
-    if tile_type == "dead_end":
-        return f"tile_dead_end_{directions[0]}.png"
-    elif tile_type == "corridor":
-        dirs = ''.join(sorted(directions))
-        return f"tile_corridor_{dirs}.png"
-    elif tile_type == "turn":
-        dirs = ''.join(sorted(directions))
-        return f"tile_turn_{dirs}.png"
-    elif tile_type == "t_section":
-        missing_dir = (set("NSEW") - set(directions)).pop()
-        return f"tile_t_section_{missing_dir}.png"
-    else:  # crossroad
+    directions = sorted(directions)
+    if tile_type == "crossroad":
         return "tile_crossroad.png"
+    elif tile_type == "corridor":
+        return "tile_corridor_NS.png" if directions == ["N", "S"] else "tile_corridor_EW.png"
+    elif tile_type == "turn":
+        if directions == ["E", "N"]: return "tile_turn_NE.png"
+        elif directions == ["N", "W"]: return "tile_turn_NW.png"
+        elif directions == ["E", "S"]: return "tile_turn_SE.png"
+        elif directions == ["S", "W"]: return "tile_turn_SW.png"
+    elif tile_type == "t_section":
+        missing_direction = ({"N", "E", "S", "W"} - set(directions)).pop()
+        return f"tile_t_section_{missing_direction}.png"
+    elif tile_type == "dead_end":
+        return f"tile_dead_end_{directions[0]}.png"
+    return "tile_crossroad.png"
 
 def generate_labyrinth(size: int, seed: Optional[str], db: Session):
     if size < 4 or size > 10:
