@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 from datetime import datetime
 from schemas import ClientJoinRequest, GameSessionCreateRequest, PlayerStatus, SessionStatus
 
-from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth
+from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth, get_image_filename
 from state import session_readiness, lock
 from realtime import broadcast_session_update
 from realtime import broadcast_game_started
@@ -442,6 +442,53 @@ async def get_full_game_state(session_id: UUID, db: Session = Depends(get_db)):
             detail=f"An unexpected error occurred: {str(e)}"
         )
 
+# API endpoint to retrieve a simplified visual representation of the labyrinth map for frontend visualization
+@router.get('/api/game-state/{session_id}/visual-map')
+async def get_visual_map(session_id: UUID, db: Session = Depends(get_db)):
+    # Convert UUID to string for consistent querying
+    session_id_str = str(session_id)
 
+    # Retrieve the game state data from the database
+    game_state_entry = db.query(GameStateDB).filter(GameStateDB.session_id == session_id_str).first()
 
+    # Raise error explicitly if no game state entry is found for given session
+    if not game_state_entry:
+        raise HTTPException(status_code=404, detail="Game state not found.")
+
+    # Parse the stored JSON game state
+    game_state = game_state_entry.game_state
+
+    # Container for visual tile data to return to frontend
+    visual_tiles = []
+
+    # Iterate over each tile stored in the labyrinth data
+    for tile_id, tile_info in game_state['labyrinth'].items():
+        # Sort directions explicitly to ensure consistent filename generation
+        directions = sorted(tile_info['open_directions'])
+
+        # Use existing helper function to get correct image filename based on tile type and open directions
+        tile_image = get_image_filename(tile_info['type'], directions)
+
+        # Identify any entities present on the current tile
+        entities_on_tile = []
+        for entity_id, entity_info in game_state['entities'].items():
+            # Explicitly check if entity is positioned on current tile
+            if entity_info.get('position') == tile_id:
+                entities_on_tile.append(entity_info['type'])
+
+        # Create structured tile object for visualization
+        visual_tile = {
+            "x": tile_info['x'],  # X-coordinate on labyrinth grid
+            "y": tile_info['y'],  # Y-coordinate on labyrinth grid
+            "image": tile_image,  # Image filename for tile visualization
+            "revealed": tile_info.get('revealed', False),  # Tile revealed state (for future use)
+            "entities": entities_on_tile,  # List of entity types currently occupying this tile
+            "map_object": tile_info.get('map_object')  # Additional map object if present
+        }
+
+        # Add prepared tile data to visual tiles list
+        visual_tiles.append(visual_tile)
+
+    # Return structured tile visualization data to frontend
+    return {"tiles": visual_tiles}
 
