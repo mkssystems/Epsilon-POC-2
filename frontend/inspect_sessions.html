@@ -88,35 +88,99 @@
       else displaySessionJson(sessionId, `frame-${sessionId}`);
     }
 
-    async function displaySessionMap(sessionId, containerId) {
-      const res = await fetch(`/api/game-state/${sessionId}/visual-map`);
-      if (!res.ok) return alert("Failed to load session map.");
-      const { tiles } = await res.json();
-      const size = Math.sqrt(tiles.length);
-      const mapDiv = document.getElementById(containerId);
-      mapDiv.innerHTML = "";
-      for (let y = 0; y < size; y++) {
-        const rowDiv = document.createElement("div");
-        rowDiv.style.display = "flex";
-        for (let x = 0; x < size; x++) {
-          const tile = tiles.find(t => t.x === x && t.y === y);
-          const imgDiv = document.createElement("div");
-          imgDiv.style.position = "relative";
-          const img = document.createElement("img");
-          img.className = "tile-img";
-          img.src = `/tiles/${tile.image}`;
-          imgDiv.appendChild(img);
-          tile.entities.forEach(entity => {
-            const marker = document.createElement("div");
-            marker.className = "marker";
-            marker.innerText = entity.charAt(0).toUpperCase();
-            imgDiv.appendChild(marker);
-          });
-          rowDiv.appendChild(imgDiv);
-        }
-        mapDiv.appendChild(rowDiv);
+   async function displaySessionMap(sessionId, containerId) {
+  const res = await fetch(`/api/game-state/${sessionId}/visual-map`);
+  if (!res.ok) return alert("Failed to load session map.");
+
+  const { tiles } = await res.json();
+  const size = Math.sqrt(tiles.length); // assuming square labyrinth
+
+  const mapDiv = document.getElementById(containerId);
+  mapDiv.innerHTML = "";
+  mapDiv.style.display = 'inline-block';
+
+  // Create Y-axis labels (vertical axis)
+  const yAxisDiv = document.createElement("div");
+  yAxisDiv.style.display = "inline-block";
+  yAxisDiv.style.verticalAlign = "top";
+  yAxisDiv.style.marginRight = "5px";
+
+  // Empty space for corner alignment
+  yAxisDiv.innerHTML += '<div style="height: 20px;"></div>';
+
+  for (let y = 0; y < size; y++) {
+    const label = document.createElement("div");
+    label.style.height = "80px"; // match tile height
+    label.style.display = "flex";
+    label.style.alignItems = "center";
+    label.style.justifyContent = "center";
+    label.style.fontWeight = "bold";
+    label.innerText = y;
+    yAxisDiv.appendChild(label);
+  }
+
+  mapDiv.appendChild(yAxisDiv);
+
+  // Create main map container
+  const gridContainer = document.createElement("div");
+  gridContainer.style.display = "inline-block";
+
+  // Create top X-axis labels
+  const topXAxis = document.createElement("div");
+  topXAxis.style.display = "flex";
+  topXAxis.style.marginBottom = "5px";
+
+  // Empty corner alignment
+  const corner = document.createElement("div");
+  corner.style.width = "20px"; // for left alignment
+  topXAxis.appendChild(corner);
+
+  for (let x = 0; x < size; x++) {
+    const label = document.createElement("div");
+    label.style.width = "80px"; // match tile width
+    label.style.textAlign = "center";
+    label.style.fontWeight = "bold";
+    label.innerText = x;
+    topXAxis.appendChild(label);
+  }
+  gridContainer.appendChild(topXAxis);
+
+  // Create tile rows
+  for (let y = 0; y < size; y++) {
+    const rowDiv = document.createElement("div");
+    rowDiv.style.display = "flex";
+
+    for (let x = 0; x < size; x++) {
+      const tile = tiles.find(t => t.x === x && t.y === y);
+      const imgDiv = document.createElement("div");
+      imgDiv.style.position = "relative";
+
+      const img = document.createElement("img");
+      img.className = "tile-img";
+      img.src = `/tiles/${tile.image}`;
+      imgDiv.appendChild(img);
+
+      if (tile.entities && tile.entities.length > 0) {
+        const marker = document.createElement("div");
+        marker.className = "marker";
+        marker.style.position = "absolute";
+        marker.style.top = "50%";
+        marker.style.left = "50%";
+        marker.style.transform = "translate(-50%, -50%)";
+        marker.innerText = tile.entities
+          .map(e => e.charAt(0).toUpperCase())
+          .join(", ");
+        imgDiv.appendChild(marker);
       }
+
+      rowDiv.appendChild(imgDiv);
     }
+
+    gridContainer.appendChild(rowDiv);
+  }
+
+  mapDiv.appendChild(gridContainer);
+}
 
     async function displaySessionJson(sessionId, containerId) {
       const res = await fetch(`/api/game-state/${sessionId}`);
