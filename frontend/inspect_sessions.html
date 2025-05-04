@@ -95,57 +95,50 @@
     }
 
 function visualizeSessionMap(state) {
-  const size = Math.sqrt(Object.keys(state.labyrinth).length);
+  const size = state.game_info.size; // explicitly use the provided size
   const mapDiv = document.getElementById("map");
   mapDiv.innerHTML = "";
 
   for (let y = 0; y < size; y++) {
-    const rowDiv = document.createElement("div");
-    rowDiv.className = "row";
+    const row = document.createElement("div");
+    row.className = "row";
 
     for (let x = 0; x < size; x++) {
+      // find tile directly by coordinates
       const tile = Object.values(state.labyrinth).find(t => t.x === x && t.y === y);
       const imgDiv = document.createElement("div");
       imgDiv.style.position = "relative";
+
       const img = document.createElement("img");
       img.className = "tile-img";
-
-      // Fix starts here: parse directions safely
-      let directions;
-      try {
-        directions = JSON.parse(tile.open_directions);
-        if (!Array.isArray(directions)) directions = [directions];
-      } catch (e) {
-        directions = [tile.open_directions];
-      }
-      img.src = `/tiles/${getImageName(tile.type, directions)}`;
-
+      img.src = `/tiles/${tile.image}`; // Use the explicit image filename provided by backend
       imgDiv.appendChild(img);
 
+      // Correct entities handling:
       const markers = [];
-      if (state.entities) {
-        for (const [id, entity] of Object.entries(state.entities)) {
-          if (entity.position === tile.id) markers.push('E');
-        }
-      }
-      if (state.map_objects) {
-        for (const [id, obj] of Object.entries(state.map_objects)) {
-          if (obj.position === tile.id) markers.push('O');
-        }
+      for (const entity of tile.entities) {
+        if (entity.type === "enemy") markers.push('E');
+        else if (entity.type === "npc") markers.push('N');
+        else if (entity.type === "player") markers.push('P');
       }
 
       if (markers.length > 0) {
         const marker = document.createElement("div");
         marker.className = "marker";
+        marker.style.top = "50%";
+        marker.style.left = "50%";
+        marker.style.transform = "translate(-50%, -50%)";
         marker.innerText = markers.join(',');
         imgDiv.appendChild(marker);
       }
 
-      rowDiv.appendChild(imgDiv);
+      row.appendChild(imgDiv);
     }
-    mapDiv.appendChild(rowDiv);
+
+    mapDiv.appendChild(row);
   }
 }
+
     window.onload = fetchGameSessions;
   </script>
 </body>
