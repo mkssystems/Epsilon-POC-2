@@ -24,7 +24,8 @@ class GameFlowController:
         """
         Explicitly delegates Turn 0 initialization to its dedicated phase logic.
         """
-        execute_turn_zero(self.db_session, self.game_state)
+        # FIXED: explicitly passing session_id instead of entire GameState object
+        execute_turn_zero(self.db_session, self.session_id)
 
         print(f"[INFO] Game start explicitly handled by Turn 0 for session {self.session_id}")
 
