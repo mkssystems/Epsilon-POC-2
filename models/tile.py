@@ -1,3 +1,4 @@
+#models/tile.py
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
