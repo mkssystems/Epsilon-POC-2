@@ -5,21 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inspect Sessions</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f7f7f7; }
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f7f7f7; position: relative; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { padding: 8px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
     th { background-color: #4CAF50; color: white; }
     button { margin: 5px; padding: 6px; border-radius: 3px; border: none; cursor: pointer; background-color: #4CAF50; color: white; }
     button:hover { background-color: #45a049; }
-    .row { display: flex; }
     .tile-img { width: 80px; height: 80px; object-fit: cover; border: 1px solid #aaa; position: relative; }
-    .marker { position: absolute; bottom: 0; right: 0; background-color: rgba(255,0,0,0.8); color: white; padding: 2px; font-size: 10px; }
-    #map, #json-state { margin-top: 20px; }
-    pre { background-color: #fff; padding: 10px; border-radius: 5px; border: 1px solid #ddd; overflow-x: auto; }
+    .marker { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(255,0,0,0.8); color: white; padding: 2px; font-size: 10px; }
+
+    .frame-window {
+      position: fixed; top: 10%; left: 50%;
+      transform: translateX(-50%); width: 80%; max-width: 800px;
+      background-color: #fff; border: 1px solid #ccc; border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3); padding: 10px; z-index: 100;
+    }
+
+    .frame-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
+    .frame-content { overflow-y: auto; max-height: 70vh; padding: 10px; }
+    .close-btn { cursor: pointer; font-weight: bold; }
+
+    #admin-console-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #008CBA;
+    }
+
+    #admin-console-btn:hover { background-color: #007bb5; }
   </style>
 </head>
 <body>
   <h1>Inspect Sessions</h1>
+  <button id="admin-console-btn" onclick="window.location='https://epsilon-poc-2.onrender.com/'">← Epsilon Admin Console</button>
 
   <table id="sessions-table">
     <thead>
@@ -32,9 +50,6 @@
     </thead>
     <tbody id="sessions-body"></tbody>
   </table>
-
-  <div id="map"></div>
-  <div id="json-state" style="display:none;"><pre id="json-content"></pre></div>
 
   <script>
     async function fetchGameSessions() {
@@ -49,95 +64,67 @@
           <td>${session.creator_client_id}</td>
           <td>${new Date(session.created_at).toLocaleString()}</td>
           <td>
-            <button onclick="displaySessionMap('${session.id}')">Display Map</button>
-            <button onclick="displaySessionJson('${session.id}')">View JSON</button>
+            <button onclick="openFrame('${session.id}', 'map')">Display Map</button>
+            <button onclick="openFrame('${session.id}', 'json')">View JSON</button>
           </td>
         `;
         tbody.appendChild(row);
       });
     }
 
-    async function displaySessionMap(sessionId) {
+    function openFrame(sessionId, type) {
+      const frame = document.createElement('div');
+      frame.className = 'frame-window';
+      frame.innerHTML = `
+        <div class="frame-header">
+          <h3>Session: ${sessionId}</h3>
+          <span class="close-btn" onclick="this.parentElement.parentElement.remove();">✖</span>
+        </div>
+        <div class="frame-content" id="frame-${sessionId}"></div>
+      `;
+      document.body.appendChild(frame);
+
+      if (type === 'map') displaySessionMap(sessionId, `frame-${sessionId}`);
+      else displaySessionJson(sessionId, `frame-${sessionId}`);
+    }
+
+    async function displaySessionMap(sessionId, containerId) {
+      const res = await fetch(`/api/game-state/${sessionId}/map`);
+      if (!res.ok) return alert("Failed to load session map.");
+      const { tiles, size } = await res.json();
+      const mapDiv = document.getElementById(containerId);
+      mapDiv.innerHTML = "";
+      for (let y = 0; y < size; y++) {
+        const rowDiv = document.createElement("div");
+        rowDiv.style.display = "flex";
+        for (let x = 0; x < size; x++) {
+          const tile = tiles.find(t => t.x === x && t.y === y);
+          const imgDiv = document.createElement("div");
+          imgDiv.style.position = "relative";
+          const img = document.createElement("img");
+          img.className = "tile-img";
+          img.src = `/tiles/${tile.image}`;
+          imgDiv.appendChild(img);
+          tile.entities.forEach(entity => {
+            const marker = document.createElement("div");
+            marker.className = "marker";
+            marker.innerText = entity.type.charAt(0).toUpperCase();
+            imgDiv.appendChild(marker);
+          });
+          rowDiv.appendChild(imgDiv);
+        }
+        mapDiv.appendChild(rowDiv);
+      }
+    }
+
+    async function displaySessionJson(sessionId, containerId) {
       const res = await fetch(`/api/game-state/${sessionId}`);
-      if (!res.ok) return alert("Failed to load session details.");
+      if (!res.ok) return alert("Failed to load session JSON.");
       const state = await res.json();
-      visualizeSessionMap(state);
-      document.getElementById("json-state").style.display = 'none';
+      const jsonPre = document.createElement("pre");
+      jsonPre.textContent = JSON.stringify(state, null, 2);
+      document.getElementById(containerId).appendChild(jsonPre);
     }
-
-    async function displaySessionJson(sessionId) {
-      const res = await fetch(`/api/game-state/${sessionId}`);
-      if (!res.ok) return alert("Failed to load session details.");
-      const state = await res.json();
-      document.getElementById("json-content").textContent = JSON.stringify(state, null, 2);
-      document.getElementById("json-state").style.display = 'block';
-      document.getElementById("map").innerHTML = "";
-    }
-
-    function getImageName(tile_type, directions) {
-      directions = directions.sort();
-      if (tile_type === "crossroad") {
-        return "tile_crossroad.png";
-      } else if (tile_type === "corridor") {
-        return directions.join('') === "NS" ? "tile_corridor_NS.png" : "tile_corridor_EW.png";
-      } else if (tile_type === "turn") {
-        if (directions.join('') === "EN") return "tile_turn_NE.png";
-        if (directions.join('') === "NW") return "tile_turn_NW.png";
-        if (directions.join('') === "ES") return "tile_turn_SE.png";
-        if (directions.join('') === "SW") return "tile_turn_SW.png";
-      } else if (tile_type === "t_section") {
-        const missing = ["N", "E", "S", "W"].filter(dir => !directions.includes(dir))[0];
-        return `tile_t_section_${missing}.png`;
-      } else if (tile_type === "dead_end") {
-        return `tile_dead_end_${directions[0]}.png`;
-      }
-      return "tile_crossroad.png";
-    }
-
-function visualizeSessionMap(state) {
-  const size = state.game_info.size; // explicitly use the provided size
-  const mapDiv = document.getElementById("map");
-  mapDiv.innerHTML = "";
-
-  for (let y = 0; y < size; y++) {
-    const row = document.createElement("div");
-    row.className = "row";
-
-    for (let x = 0; x < size; x++) {
-      // find tile directly by coordinates
-      const tile = Object.values(state.labyrinth).find(t => t.x === x && t.y === y);
-      const imgDiv = document.createElement("div");
-      imgDiv.style.position = "relative";
-
-      const img = document.createElement("img");
-      img.className = "tile-img";
-      img.src = `/tiles/${tile.image}`; // Use the explicit image filename provided by backend
-      imgDiv.appendChild(img);
-
-      // Correct entities handling:
-      const markers = [];
-      for (const entity of tile.entities) {
-        if (entity.type === "enemy") markers.push('E');
-        else if (entity.type === "npc") markers.push('N');
-        else if (entity.type === "player") markers.push('P');
-      }
-
-      if (markers.length > 0) {
-        const marker = document.createElement("div");
-        marker.className = "marker";
-        marker.style.top = "50%";
-        marker.style.left = "50%";
-        marker.style.transform = "translate(-50%, -50%)";
-        marker.innerText = markers.join(',');
-        imgDiv.appendChild(marker);
-      }
-
-      row.appendChild(imgDiv);
-    }
-
-    mapDiv.appendChild(row);
-  }
-}
 
     window.onload = fetchGameSessions;
   </script>
