@@ -94,40 +94,58 @@
       return "tile_crossroad.png";
     }
 
-    function visualizeSessionMap(state) {
-      const size = Math.sqrt(Object.keys(state.labyrinth).length);
-      const mapDiv = document.getElementById("map");
-      mapDiv.innerHTML = "";
-      for (let y = 0; y < size; y++) {
-        const rowDiv = document.createElement("div");
-        rowDiv.className = "row";
-        for (let x = 0; x < size; x++) {
-          const tile = Object.values(state.labyrinth).find(t => t.x === x && t.y === y);
-          const imgDiv = document.createElement("div");
-          imgDiv.style.position = "relative";
-          const img = document.createElement("img");
-          img.className = "tile-img";
-          img.src = `/tiles/${getImageName(tile.type, tile.open_directions)}`;
-          imgDiv.appendChild(img);
+function visualizeSessionMap(state) {
+  const size = Math.sqrt(Object.keys(state.labyrinth).length);
+  const mapDiv = document.getElementById("map");
+  mapDiv.innerHTML = "";
 
-          const markers = [];
-          for (const entity of Object.values(state.entities))
-            if (entity.position === tile.id) markers.push('E');
-          for (const obj of Object.values(state.map_objects))
-            if (obj.position === tile.id) markers.push('O');
+  for (let y = 0; y < size; y++) {
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "row";
 
-          if (markers.length > 0) {
-            const marker = document.createElement("div");
-            marker.className = "marker";
-            marker.innerText = markers.join(',');
-            imgDiv.appendChild(marker);
-          }
-          rowDiv.appendChild(imgDiv);
-        }
-        mapDiv.appendChild(rowDiv);
+    for (let x = 0; x < size; x++) {
+      const tile = Object.values(state.labyrinth).find(t => t.x === x && t.y === y);
+      const imgDiv = document.createElement("div");
+      imgDiv.style.position = "relative";
+      const img = document.createElement("img");
+      img.className = "tile-img";
+
+      // Fix starts here: parse directions safely
+      let directions;
+      try {
+        directions = JSON.parse(tile.open_directions);
+        if (!Array.isArray(directions)) directions = [directions];
+      } catch (e) {
+        directions = [tile.open_directions];
       }
-    }
+      img.src = `/tiles/${getImageName(tile.type, directions)}`;
 
+      imgDiv.appendChild(img);
+
+      const markers = [];
+      if (state.entities) {
+        for (const [id, entity] of Object.entries(state.entities)) {
+          if (entity.position === tile.id) markers.push('E');
+        }
+      }
+      if (state.map_objects) {
+        for (const [id, obj] of Object.entries(state.map_objects)) {
+          if (obj.position === tile.id) markers.push('O');
+        }
+      }
+
+      if (markers.length > 0) {
+        const marker = document.createElement("div");
+        marker.className = "marker";
+        marker.innerText = markers.join(',');
+        imgDiv.appendChild(marker);
+      }
+
+      rowDiv.appendChild(imgDiv);
+    }
+    mapDiv.appendChild(rowDiv);
+  }
+}
     window.onload = fetchGameSessions;
   </script>
 </body>
