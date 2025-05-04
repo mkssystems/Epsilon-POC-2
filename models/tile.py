@@ -1,5 +1,5 @@
-#models/tile.py
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
+# models/tile.py
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from .base import Base
@@ -13,7 +13,7 @@ class Tile(Base):
     x = Column(Integer, nullable=False)
     y = Column(Integer, nullable=False)
     type = Column(String(100), nullable=False)
-    open_directions = Column(String(100), nullable=False)
-    revealed = Column(Boolean, nullable=False, default=False)  # Added revealed column
+    open_directions = Column(JSON, nullable=False)  # ✅ Changed to JSON type explicitly
+    revealed = Column(Boolean, nullable=False, default=False)
 
     labyrinth = relationship("Labyrinth", back_populates="tiles")
