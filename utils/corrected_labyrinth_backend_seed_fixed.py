@@ -79,14 +79,13 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session):
         directions = sorted(tile_data['open_directions'])
         tile_type = get_tile_type_from_directions(directions)
 
-        open_dirs_db = directions[0] if len(directions) == 1 else json.dumps(directions)
-
+        # ALWAYS store directions directly as Python list
         tile = Tile(
             labyrinth_id=labyrinth.id,
             x=x,
             y=y,
             type=tile_type,
-            open_directions=open_dirs_db
+            open_directions=directions
         )
         db.add(tile)
 
@@ -100,6 +99,5 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session):
 
     db.commit()
 
-    # DO NOT assign tiles_response to labyrinth ORM object
-    # Return them separately instead
+    # Return labyrinth and generated tiles separately
     return labyrinth, tiles_response
