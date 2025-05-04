@@ -2,7 +2,7 @@
 
 from sqlalchemy.orm import Session
 from game_logic.models.game_state_db import GameStateDB
-from game_logic.data.game_state import GameState, asdict
+from game_logic.data.game_state import GameState, GameInfo, TurnInfo, PhaseInfo, GamePhaseName, asdict
 from config import SessionLocal
 import json
 from datetime import datetime
@@ -16,9 +16,10 @@ def json_serializer(obj):
         return obj.value  # Explicitly serialize enums by their value
     raise TypeError(f"Type {type(obj)} not serializable")
 
+# Explicitly saves game state to the database
 def save_game_state_to_db(session: Session, game_state: GameState):
     state_dict = asdict(game_state)
-    session_id = game_state.session_id
+    session_id = game_state.game_info.session_id
 
     db_entry = session.query(GameStateDB).filter_by(session_id=session_id).first()
 
@@ -38,9 +39,11 @@ def save_game_state_to_db(session: Session, game_state: GameState):
         session.rollback()
         print(f"[ERROR] Failed to explicitly save game state: {e}")
 
+# Explicitly returns a new database session
 def get_db_session() -> Session:
     return SessionLocal()
 
+# Explicitly loads initial game state from database, or initializes if none exists
 def load_initial_game_state(session: Session, session_id: str) -> GameState:
     db_entry = session.query(GameStateDB).filter_by(session_id=session_id).first()
 
@@ -48,7 +51,7 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
         game_state_dict = db_entry.game_state
         game_state = GameState(**game_state_dict)
     else:
-        # Use updated structure explicitly
+        # Explicitly initialize a default game state structure
         game_info = GameInfo(
             session_id=session_id,
             scenario="Unknown",
