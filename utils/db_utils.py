@@ -46,13 +46,35 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
         game_state_dict = db_entry.game_state
         game_state = GameState(**game_state_dict)
     else:
-        game_state = GameState(
+        # Use updated structure explicitly
+        game_info = GameInfo(
             session_id=session_id,
-            turn=None,
-            phase=None,
-            entities=[],
+            scenario="Unknown",
+            labyrinth_id="",
+            size=0,
+            seed=""
+        )
+        
+        turn_info = TurnInfo(
+            number=0,
+            started_at=datetime.utcnow()
+        )
+        
+        phase_info = PhaseInfo(
+            name=GamePhaseName.TURN_0,
+            number=None,
+            is_end_turn=False,
+            started_at=datetime.utcnow()
+        )
+
+        game_state = GameState(
+            game_info=game_info,
+            turn=turn_info,
+            phase=phase_info,
+            entities={},
             labyrinth={}
         )
+
         new_db_entry = GameStateDB(
             session_id=session_id,
             game_state=json.loads(json.dumps(asdict(game_state), default=json_serializer))
