@@ -1,3 +1,5 @@
+#models/session_player_character.py
+
 from sqlalchemy import Column, String, Boolean, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
