@@ -445,50 +445,53 @@ async def get_full_game_state(session_id: UUID, db: Session = Depends(get_db)):
 # API endpoint to retrieve a simplified visual representation of the labyrinth map for frontend visualization
 @router.get('/api/game-state/{session_id}/visual-map')
 async def get_visual_map(session_id: UUID, db: Session = Depends(get_db)):
-    # Convert UUID to string for consistent querying
+    # Convert UUID to string explicitly for consistent database querying
     session_id_str = str(session_id)
 
-    # Retrieve the game state data from the database
+    # Retrieve the game state entry explicitly from the database using session ID
     game_state_entry = db.query(GameStateDB).filter(GameStateDB.session_id == session_id_str).first()
 
-    # Raise error explicitly if no game state entry is found for given session
+    # Explicitly handle scenario where no game state is found for the provided session ID
     if not game_state_entry:
         raise HTTPException(status_code=404, detail="Game state not found.")
 
-    # Parse the stored JSON game state
+    # Parse the stored JSON game state explicitly
     game_state = game_state_entry.game_state
 
-    # Container for visual tile data to return to frontend
+    # Initialize container for visual tiles to be sent to frontend visualization
     visual_tiles = []
 
-    # Iterate over each tile stored in the labyrinth data
+    # Iterate explicitly over each tile stored in the labyrinth structure
     for tile_id, tile_info in game_state['labyrinth'].items():
-        # Sort directions explicitly to ensure consistent filename generation
+        # Explicitly sort directions to ensure consistent tile image filename generation
         directions = sorted(tile_info['open_directions'])
 
-        # Use existing helper function to get correct image filename based on tile type and open directions
+        # Use existing helper to generate correct tile image filename based on tile type and open directions
         tile_image = get_image_filename(tile_info['type'], directions)
 
-        # Identify any entities present on the current tile
-        entities_on_tile = []
-        for entity_id, entity_info in game_state['entities'].items():
-            # Explicitly check if entity is positioned on current tile
-            if entity_info.get('position') == tile_id:
-                entities_on_tile.append(entity_info['type'])
+        # Retrieve explicitly detailed entity data directly associated with this tile
+        entities_on_tile = [
+            {
+                "id": entity['id'],  # Unique identifier of the entity
+                "type": entity['type'],  # Entity type explicitly defined (player, enemy, npc)
+                "name": game_state['entities'][entity['id']].get('type', 'Unknown').capitalize()  # Human-readable name
+            }
+            for entity in tile_info.get('entities', [])
+        ]
 
-        # Create structured tile object for visualization
+        # Structure tile information explicitly for frontend visualization
         visual_tile = {
-            "x": tile_info['x'],  # X-coordinate on labyrinth grid
-            "y": tile_info['y'],  # Y-coordinate on labyrinth grid
-            "image": tile_image,  # Image filename for tile visualization
-            "revealed": tile_info.get('revealed', False),  # Tile revealed state (for future use)
-            "entities": entities_on_tile,  # List of entity types currently occupying this tile
-            "map_object": tile_info.get('map_object')  # Additional map object if present
+            "x": tile_info['x'],  # X-coordinate explicitly on the labyrinth grid
+            "y": tile_info['y'],  # Y-coordinate explicitly on the labyrinth grid
+            "image": tile_image,  # Explicit image filename representing the tile visually
+            "revealed": tile_info.get('revealed', False),  # Explicit reveal state (can be used later)
+            "entities": entities_on_tile,  # Explicitly detailed entities present on this tile
+            "map_object": tile_info.get('map_object')  # Explicit additional map object if applicable
         }
 
-        # Add prepared tile data to visual tiles list
+        # Append explicitly prepared tile data to the visual tiles container
         visual_tiles.append(visual_tile)
 
-    # Return structured tile visualization data to frontend
+    # Explicitly return structured visual tiles data for frontend rendering
     return {"tiles": visual_tiles}
 
