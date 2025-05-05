@@ -155,7 +155,8 @@ async function displaySessionMap(sessionId, containerId) {
         marker.style.padding = "2px 4px";
         marker.style.fontSize = "12px";
         marker.style.borderRadius = "3px";
-        marker.innerText = tile.entities.map(e => e.charAt(0).toUpperCase()).join(", ");
+        marker.innerText = tile.entities.map(e => e.type.charAt(0).toUpperCase()).join(", ");
+
         tileDiv.appendChild(marker);
       }
 
@@ -185,14 +186,17 @@ async function displaySessionMap(sessionId, containerId) {
 
   tiles.forEach(tile => {
     if (tile.entities && tile.entities.length > 0) {
-      tile.entities.forEach(entityType => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td style="border: 1px solid #ddd; padding: 8px;">${entityType.charAt(0).toUpperCase() + entityType.slice(1)}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">(${tile.x}, ${tile.y})</td>
-        `;
-        tbody.appendChild(row);
-      });
+      tile.entities.forEach(entity => {
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td style="border: 1px solid #ddd; padding: 8px;">
+      ${entity.type.charAt(0).toUpperCase() + entity.type.slice(1)}
+    </td>
+    <td style="border: 1px solid #ddd; padding: 8px;">(${tile.x}, ${tile.y})</td>
+  `;
+  tbody.appendChild(row);
+});
+
     }
   });
 
