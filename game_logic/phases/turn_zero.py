@@ -13,6 +13,7 @@ from game_logic.scenarios.epsilon267_fulcrum_incident.epsilon267_fulcrum_inciden
 )
 from game_logic.scenarios.epsilon267_fulcrum_incident.map_objects_placement import place_map_objects
 from models.game_entities import Entity as DbEntity
+from models.session_player_character import SessionPlayerCharacter  # Explicitly import model
 
 # Explicitly retrieve scenario details from the database
 def retrieve_scenario_details(db_session, session_id):
