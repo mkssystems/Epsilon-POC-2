@@ -472,20 +472,19 @@ async def get_visual_map(session_id: UUID, db: Session = Depends(get_db)):
         # Retrieve explicitly detailed entity data directly associated with this tile
         entities_on_tile = [
             {
-                "id": entity['id'],  # Unique identifier of the entity
-                "type": entity['type'],  # Entity type explicitly defined (player, enemy, npc)
-                "name": game_state['entities'][entity['id']].get('type', 'Unknown').capitalize()  # Human-readable name
+                "id": entity['id'],       # Unique identifier of the entity
+                "type": entity['type'],   # Entity type explicitly defined (player, enemy, npc)
             }
             for entity in tile_info.get('entities', [])
         ]
 
         # Structure tile information explicitly for frontend visualization
         visual_tile = {
-            "x": tile_info['x'],  # X-coordinate explicitly on the labyrinth grid
-            "y": tile_info['y'],  # Y-coordinate explicitly on the labyrinth grid
-            "image": tile_image,  # Explicit image filename representing the tile visually
+            "x": tile_info['x'],                   # X-coordinate explicitly on the labyrinth grid
+            "y": tile_info['y'],                   # Y-coordinate explicitly on the labyrinth grid
+            "image": tile_image,                   # Explicit image filename representing the tile visually
             "revealed": tile_info.get('revealed', False),  # Explicit reveal state (can be used later)
-            "entities": entities_on_tile,  # Explicitly detailed entities present on this tile
+            "entities": entities_on_tile,          # Explicitly detailed entities present on this tile
             "map_object": tile_info.get('map_object')  # Explicit additional map object if applicable
         }
 
