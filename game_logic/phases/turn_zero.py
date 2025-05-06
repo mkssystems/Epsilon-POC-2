@@ -56,20 +56,31 @@ def define_initial_labyrinth(db_session, labyrinth_id, entities_positions, map_o
     return labyrinth
 
 # Explicitly define initial entity details
-def define_initial_entity_details(db_session, entities_positions):
+def define_initial_entity_details(db_session, entities_positions, player_entities_with_clients):
     entities = {}
+
+    # Explicitly build a dictionary mapping entity IDs to client IDs for quick lookup
+    client_controlled_entities = {entity.id: client_id for entity, client_id in player_entities_with_clients}
+
     for entity_id in entities_positions:
         db_entity = db_session.query(DbEntity).filter(DbEntity.id == entity_id).first()
         if not db_entity:
             error_msg = f"No entity record found explicitly for entity_id={entity_id}"
             print(f"[ERROR] {error_msg}")
             raise ValueError(error_msg)
+
+        # Explicitly set controlled_by_user_id for player entities; otherwise None
         entities[entity_id] = EntityDetail(
             type=db_entity.type,
-            controlled_by_user_id=None
+            controlled_by_user_id=client_controlled_entities.get(entity_id)
         )
-    print(f"[INFO] Initialized entity details explicitly for entities: {list(entities.keys())}")
+
+    # Log explicitly the initialized entities and their controllers
+    print(f"[INFO] Explicitly initialized entity details with user control associations: "
+          f"{[(eid, detail.controlled_by_user_id) for eid, detail in entities.items()]}")
+    
     return entities
+
 
 # Main procedural orchestrating function for Turn 0 initialization
 def execute_turn_zero(db_session, session_id):
@@ -147,7 +158,7 @@ def execute_turn_zero(db_session, session_id):
         raise
 
     labyrinth = define_initial_labyrinth(db_session, labyrinth_id, entities_positions, map_objects_positions)
-    entities = define_initial_entity_details(db_session, entities_positions)
+    entities = define_initial_entity_details(db_session, entities_positions, player_entities_with_clients)
 
     game_state = GameState(
         game_info=GameInfo(session_id=session_id, scenario=scenario_name, labyrinth_id=str(labyrinth_id), size=size, seed=seed),
