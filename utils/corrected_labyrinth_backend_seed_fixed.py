@@ -1,4 +1,4 @@
-#utils/corrected_labyrinth_backend_seed_fixed.py
+# utils/corrected_labyrinth_backend_seed_fixed.py
 from sqlalchemy.orm import Session
 from typing import Optional
 import random
@@ -10,6 +10,7 @@ import json
 DIRECTIONS = {"N": (0, -1), "S": (0, 1), "E": (1, 0), "W": (-1, 0)}
 OPPOSITE = {"N": "S", "S": "N", "E": "W", "W": "E"}
 
+# Determine the type of tile based on its open directions
 def get_tile_type_from_directions(directions):
     if len(directions) == 1:
         return "dead_end"
@@ -23,6 +24,7 @@ def get_tile_type_from_directions(directions):
     else:
         return "crossroad"
 
+# Get the appropriate image filename based on tile type and directions
 def get_image_filename(tile_type, directions):
     directions = sorted(directions)
     if tile_type == "crossroad":
@@ -41,6 +43,7 @@ def get_image_filename(tile_type, directions):
         return f"tile_dead_end_{directions[0]}.png"
     return "tile_crossroad.png"
 
+# Generate the labyrinth structure with tiles
 def generate_labyrinth(size: int, seed: Optional[str], db: Session):
     if size < 4 or size > 10:
         raise ValueError("Size must be between 4 and 10")
@@ -82,13 +85,16 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session):
         directions = sorted(tile_data['open_directions'])
         tile_type = get_tile_type_from_directions(directions)
 
-        # ALWAYS store directions directly as Python list
         tile = Tile(
             labyrinth_id=labyrinth.id,
             x=x,
             y=y,
             type=tile_type,
-            open_directions=directions
+            open_directions=directions,
+
+            # Temporary placeholders explicitly added to avoid breaking existing logic
+            tile_code="",        # Placeholder; will be updated in thematic overlay logic
+            thematic_area=""     # Placeholder; will be updated in thematic overlay logic
         )
         db.add(tile)
 
@@ -102,5 +108,4 @@ def generate_labyrinth(size: int, seed: Optional[str], db: Session):
 
     db.commit()
 
-    # Return labyrinth and generated tiles separately
     return labyrinth, tiles_response
