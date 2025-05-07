@@ -46,24 +46,21 @@ FORCE_REINIT_DB = True
 
 @app.on_event("startup")
 def startup():
-    if FORCE_REINIT_DB:
-        print("⚠️ Reinitializing the database from scratch...")
+    def init_db():
+        if FORCE_REINIT_DB:
+            print("⚠️ Reinitializing the database from scratch...")
+            EntityBase.metadata.drop_all(bind=engine)
+            EntityBase.metadata.create_all(bind=engine)
 
-        # Automatically drop all tables without manually specifying them
-        EntityBase.metadata.drop_all(bind=engine)
+            df_entities = pd.read_csv("assets/seed/entities.csv")
+            df_equipment = pd.read_csv("assets/seed/equipment.csv")
+            df_skills = pd.read_csv("assets/seed/skills.csv")
+            df_specials = pd.read_csv("assets/seed/specials.csv")
+            df_map_object = pd.read_csv("assets/seed/map_objects.csv")
 
-        # Automatically recreate all tables defined in EntityBase
-        EntityBase.metadata.create_all(bind=engine)
+            load_data(engine, df_entities, df_equipment, df_skills, df_specials, df_map_object)
 
-        # Load data clearly
-        df_entities = pd.read_csv("assets/seed/entities.csv")
-        df_equipment = pd.read_csv("assets/seed/equipment.csv")
-        df_skills = pd.read_csv("assets/seed/skills.csv")
-        df_specials = pd.read_csv("assets/seed/specials.csv")
-        df_map_object = pd.read_csv("assets/seed/map_objects.csv")
-
-        load_data(engine, df_entities, df_equipment, df_skills, df_specials, df_map_object)
-
+    threading.Thread(target=init_db).start()
 
 
 
