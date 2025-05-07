@@ -49,16 +49,29 @@ def startup():
     def init_db():
         if FORCE_REINIT_DB:
             print("⚠️ Reinitializing the database from scratch...")
-            EntityBase.metadata.drop_all(bind=engine)
+            
+            # Safely drop tables
+            try:
+                EntityBase.metadata.drop_all(bind=engine)
+            except Exception as e:
+                print(f"⚠️ drop_all warning: {e}")
+
+            # Safely recreate tables
             EntityBase.metadata.create_all(bind=engine)
 
-            df_entities = pd.read_csv("assets/seed/entities.csv")
-            df_equipment = pd.read_csv("assets/seed/equipment.csv")
-            df_skills = pd.read_csv("assets/seed/skills.csv")
-            df_specials = pd.read_csv("assets/seed/specials.csv")
-            df_map_object = pd.read_csv("assets/seed/map_objects.csv")
+            # Load seed data
+            try:
+                df_entities = pd.read_csv("assets/seed/entities.csv")
+                df_equipment = pd.read_csv("assets/seed/equipment.csv")
+                df_skills = pd.read_csv("assets/seed/skills.csv")
+                df_specials = pd.read_csv("assets/seed/specials.csv")
+                df_map_object = pd.read_csv("assets/seed/map_objects.csv")
 
-            load_data(engine, df_entities, df_equipment, df_skills, df_specials, df_map_object)
+                load_data(engine, df_entities, df_equipment, df_skills, df_specials, df_map_object)
+            except Exception as e:
+                print(f"❌ Data loading error: {e}")
+
+            print("✅ DB initialization complete.")
 
     threading.Thread(target=init_db).start()
 
