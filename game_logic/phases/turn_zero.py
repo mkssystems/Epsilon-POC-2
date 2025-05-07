@@ -155,8 +155,14 @@ def execute_turn_zero(db_session, session_id):
         entities_positions = {**player_positions, **enemy_positions, **npc_positions}
         map_objects_positions = place_map_objects(db_session, session_id, scenario_name)
         print(f"[INFO] Map objects positioned: {map_objects_positions}")
+
+        # Explicitly apply thematic overlay logic to tile records before initializing labyrinth
+        tile_records = db_session.query(DbTile).filter(DbTile.labyrinth_id == labyrinth_id).all()
+        apply_thematic_overlay(tile_records)  # Assign thematic area and tile codes explicitly
+        db_session.commit()  # Explicitly save thematic assignments to DB
+    
     except Exception as e:
-        print(f"[ERROR] Entity or map object placement failed: {e}")
+        print(f"[ERROR] Entity or map object placement or thematic overlay failed: {e}")
         raise
 
     labyrinth = define_initial_labyrinth(db_session, labyrinth_id, entities_positions, map_objects_positions)
