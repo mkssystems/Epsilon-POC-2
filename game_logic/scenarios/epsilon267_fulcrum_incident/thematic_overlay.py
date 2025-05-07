@@ -95,7 +95,7 @@ def apply_thematic_overlay(tiles):
         # In rare cases, explicitly handle if clustering didn't fully assign the required tiles
         # This could happen due to isolated clusters or rounding discrepancies
         if assigned < count:
-            for tile in unassigned_tiles:
+            for tile in unassigned_tiles.copy():
                 if assigned >= count:
                     break
                 sorted_directions = ''.join(sorted(tile.open_directions))
