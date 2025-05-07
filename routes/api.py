@@ -486,6 +486,8 @@ async def get_visual_map(session_id: UUID, db: Session = Depends(get_db)):
             "revealed": tile_info.get('revealed', False),  # Explicit reveal state (can be used later)
             "entities": entities_on_tile,          # Explicitly detailed entities present on this tile
             "map_object": tile_info.get('map_object')  # Explicit additional map object if applicable
+            "tile_code": tile_info.get('tile_code'),       # Thematic tile code (e.g., "C-NS")
+            "thematic_area": tile_info.get('thematic_area') # Thematic area (e.g., "Command")
         }
 
         # Append explicitly prepared tile data to the visual tiles container
