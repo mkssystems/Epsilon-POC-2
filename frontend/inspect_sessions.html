@@ -64,8 +64,9 @@
           <td>${session.creator_client_id}</td>
           <td>${new Date(session.created_at).toLocaleString()}</td>
           <td>
-            <button onclick="openFrame('${session.id}', 'map')">Display Map</button>
+            <button onclick="openFrame('${session.id}', 'map')">Display Map and Entities</button>
             <button onclick="openFrame('${session.id}', 'json')">View JSON</button>
+            <button onclick="openFrame('${session.id}', 'map_overlay')">Display Map Overlay</button>
           </td>
         `;
         tbody.appendChild(row);
@@ -73,21 +74,123 @@
     }
 
     function openFrame(sessionId, type) {
-      const frame = document.createElement('div');
-      frame.className = 'frame-window';
-      frame.innerHTML = `
-        <div class="frame-header">
-          <h3>Session: ${sessionId}</h3>
-          <span class="close-btn" onclick="this.parentElement.parentElement.remove();">✖</span>
-        </div>
-        <div class="frame-content" id="frame-${sessionId}"></div>
-      `;
-      document.body.appendChild(frame);
+  const frame = document.createElement('div');
+  frame.className = 'frame-window';
+  frame.innerHTML = `
+    <div class="frame-header">
+      <h3>Session: ${sessionId}</h3>
+      <span class="close-btn" onclick="this.parentElement.parentElement.remove();">✖</span>
+    </div>
+    <div class="frame-content" id="frame-${sessionId}"></div>
+  `;
+  document.body.appendChild(frame);
 
-      if (type === 'map') displaySessionMap(sessionId, `frame-${sessionId}`);
-      else displaySessionJson(sessionId, `frame-${sessionId}`);
+  if (type === 'map') displaySessionMap(sessionId, `frame-${sessionId}`);
+  else if (type === 'map_overlay') displaySessionMapOverlay(sessionId, `frame-${sessionId}`);
+  else displaySessionJson(sessionId, `frame-${sessionId}`);
+}
+
+
+async function displaySessionMapOverlay(sessionId, containerId) {
+  const res = await fetch(`/api/game-state/${sessionId}/visual-map`);
+  if (!res.ok) return alert("Failed to load session map overlay.");
+
+  const { tiles } = await res.json();
+  const size = Math.sqrt(tiles.length);
+
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+
+  const mapWrapper = document.createElement("div");
+  mapWrapper.style.display = "inline-block";
+
+  const topAxis = document.createElement("div");
+  topAxis.style.display = "flex";
+  topAxis.style.marginLeft = "25px";
+
+  const emptyTopLeft = document.createElement("div");
+  emptyTopLeft.style.width = "25px";
+  topAxis.appendChild(emptyTopLeft);
+
+  for (let x = 0; x < size; x++) {
+    const label = document.createElement("div");
+    label.style.width = "80px";
+    label.style.height = "20px";
+    label.style.textAlign = "center";
+    label.style.fontWeight = "bold";
+    label.innerText = x;
+    topAxis.appendChild(label);
+  }
+  mapWrapper.appendChild(topAxis);
+
+  for (let y = 0; y < size; y++) {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+
+    const yLabel = document.createElement("div");
+    yLabel.style.width = "25px";
+    yLabel.style.height = "80px";
+    yLabel.style.textAlign = "center";
+    yLabel.style.fontWeight = "bold";
+    yLabel.innerText = y;
+    row.appendChild(yLabel);
+
+    for (let x = 0; x < size; x++) {
+      const tile = tiles.find(t => t.x === x && t.y === y);
+      const tileDiv = document.createElement("div");
+      tileDiv.style.position = "relative";
+
+      // Base tile image
+      const img = document.createElement("img");
+      img.className = "tile-img";
+      img.src = `/tiles/${tile.image}`;
+      tileDiv.appendChild(img);
+
+      // Overlay thematic color based on CMYK coding
+      const overlayColorMap = {
+        'C': 'rgba(0, 255, 255, 0.5)',    // Cyan
+        'M': 'rgba(255, 0, 255, 0.5)',    // Magenta
+        'Y': 'rgba(255, 255, 0, 0.5)',    // Yellow
+        'K': 'rgba(0, 0, 0, 0.5)'         // Black
+      };
+
+      const themeCode = tile.tile_code.split('-')[0];
+      const overlayColor = overlayColorMap[themeCode] || 'rgba(255,255,255,0.5)';
+
+      const colorOverlay = document.createElement("div");
+      colorOverlay.style.position = "absolute";
+      colorOverlay.style.top = "0";
+      colorOverlay.style.left = "0";
+      colorOverlay.style.width = "80px";
+      colorOverlay.style.height = "80px";
+      colorOverlay.style.backgroundColor = overlayColor;
+      tileDiv.appendChild(colorOverlay);
+
+      // Tile code displayed explicitly in center
+      const codeLabel = document.createElement("div");
+      codeLabel.style.position = "absolute";
+      codeLabel.style.top = "50%";
+      codeLabel.style.left = "50%";
+      codeLabel.style.transform = "translate(-50%, -50%)";
+      codeLabel.style.fontWeight = "bold";
+      codeLabel.style.color = "#000";
+      codeLabel.style.backgroundColor = "rgba(255,255,255,0.7)";
+      codeLabel.style.padding = "2px 4px";
+      codeLabel.style.borderRadius = "3px";
+      codeLabel.innerText = tile.tile_code;
+      tileDiv.appendChild(codeLabel);
+
+      row.appendChild(tileDiv);
     }
+    mapWrapper.appendChild(row);
+  }
 
+  container.appendChild(mapWrapper);
+}
+
+    
+    
 async function displaySessionMap(sessionId, containerId) {
   const res = await fetch(`/api/game-state/${sessionId}/visual-map`);
   if (!res.ok) return alert("Failed to load session map.");
