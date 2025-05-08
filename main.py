@@ -50,39 +50,36 @@ def startup():
         if FORCE_REINIT_DB:
             print("⚠️ Reinitializing the database from scratch...")
 
-            # Safely attempt to drop existing tables
-            try:
-                EntityBase.metadata.drop_all(bind=engine)
+            # Open one explicit transaction for performance
+            with engine.begin() as connection:
+                # Drop and recreate tables in one transaction explicitly
+                EntityBase.metadata.drop_all(bind=connection)
                 print("✅ Tables dropped successfully.")
-            except Exception as e:
-                print(f"⚠️ Warning during drop_all: {e}")
-
-            # Safely recreate all tables
-            try:
-                EntityBase.metadata.create_all(bind=engine)
+                
+                EntityBase.metadata.create_all(bind=connection)
                 print("✅ Tables created successfully.")
-            except Exception as e:
-                print(f"❌ Error during create_all: {e}")
-                return  # Exit initialization if create fails
 
-            # Load initial seed data
-            try:
-                df_entities = pd.read_csv("assets/seed/entities.csv")
-                df_equipment = pd.read_csv("assets/seed/equipment.csv")
-                df_skills = pd.read_csv("assets/seed/skills.csv")
-                df_specials = pd.read_csv("assets/seed/specials.csv")
-                df_map_object = pd.read_csv("assets/seed/map_objects.csv")
+                # Explicitly cache CSV data as globals to avoid repeated loading
+                global cached_data
+                try:
+                    cached_data
+                except NameError:
+                    cached_data = {
+                        "entities": pd.read_csv("assets/seed/entities.csv"),
+                        "equipment": pd.read_csv("assets/seed/equipment.csv"),
+                        "skills": pd.read_csv("assets/seed/skills.csv"),
+                        "specials": pd.read_csv("assets/seed/specials.csv"),
+                        "map_objects": pd.read_csv("assets/seed/map_objects.csv"),
+                    }
 
-                load_data(engine, df_entities, df_equipment, df_skills, df_specials, df_map_object)
+                # Perform explicit bulk insert for high performance
+                load_data_bulk(connection, cached_data)
                 print("✅ Seed data loaded successfully.")
-            except Exception as e:
-                print(f"❌ Error during seed data loading: {e}")
-                return
 
             print("🚀 Database initialization complete and successful.")
 
-    # Start initialization asynchronously
     threading.Thread(target=init_db).start()
+
 
 
 
