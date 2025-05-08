@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey
+#models/mobile_client.py
+from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
@@ -12,5 +13,8 @@ class MobileClient(Base):
     client_id = Column(String(255), unique=True, nullable=False)
     connected_at = Column(DateTime, default=datetime.utcnow)
     game_session_id = Column(UUID(as_uuid=True), ForeignKey("game_sessions.id", ondelete="CASCADE"))
+    
+    # Explicitly added is_ready field
+    is_ready = Column(Boolean, default=False)
 
     game_session = relationship("GameSession", back_populates="connected_clients")
