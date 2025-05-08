@@ -104,6 +104,7 @@ async function displaySessionMapOverlay(sessionId, containerId) {
   const mapWrapper = document.createElement("div");
   mapWrapper.style.display = "inline-block";
 
+  // Axis labels
   const topAxis = document.createElement("div");
   topAxis.style.display = "flex";
   topAxis.style.marginLeft = "25px";
@@ -140,11 +141,14 @@ async function displaySessionMapOverlay(sessionId, containerId) {
       const tile = tiles.find(t => t.x === x && t.y === y);
       const tileDiv = document.createElement("div");
       tileDiv.style.position = "relative";
+      tileDiv.style.width = "80px";
+      tileDiv.style.height = "80px";
 
       // Base tile image
       const img = document.createElement("img");
       img.className = "tile-img";
       img.src = `/tiles/${tile.image}`;
+      img.style.display = "block";
       tileDiv.appendChild(img);
 
       // Overlay thematic color based on CMYK coding
@@ -156,18 +160,19 @@ async function displaySessionMapOverlay(sessionId, containerId) {
       };
 
       const themeCode = tile.tile_code ? tile.tile_code.split('-')[0] : '';
-      const overlayColor = overlayColorMap[themeCode] || 'rgba(255,255,255,0.5)';
+      const overlayColor = overlayColorMap[themeCode] || 'rgba(255,255,255,0.3)';
 
       const colorOverlay = document.createElement("div");
       colorOverlay.style.position = "absolute";
       colorOverlay.style.top = "0";
       colorOverlay.style.left = "0";
-      colorOverlay.style.width = "80px";
-      colorOverlay.style.height = "80px";
+      colorOverlay.style.width = "100%";
+      colorOverlay.style.height = "100%";
       colorOverlay.style.backgroundColor = overlayColor;
+      colorOverlay.style.zIndex = "1";  // explicitly set z-index
       tileDiv.appendChild(colorOverlay);
 
-      // Tile code displayed explicitly in center
+      // Tile code displayed explicitly at center on top of overlay
       const codeLabel = document.createElement("div");
       codeLabel.style.position = "absolute";
       codeLabel.style.top = "50%";
@@ -178,7 +183,9 @@ async function displaySessionMapOverlay(sessionId, containerId) {
       codeLabel.style.backgroundColor = "rgba(255,255,255,0.7)";
       codeLabel.style.padding = "2px 4px";
       codeLabel.style.borderRadius = "3px";
-      codeLabel.innerText = tile.tile_code;
+      codeLabel.style.fontSize = "12px";
+      codeLabel.style.zIndex = "2";  // explicitly ensure it’s above the overlay
+      codeLabel.innerText = tile.tile_code || '';
       tileDiv.appendChild(codeLabel);
 
       row.appendChild(tileDiv);
