@@ -442,57 +442,66 @@ async def get_full_game_state(session_id: UUID, db: Session = Depends(get_db)):
             detail=f"An unexpected error occurred: {str(e)}"
         )
 
-# API endpoint to retrieve a simplified visual representation of the labyrinth map for frontend visualization
+# API endpoint to retrieve a detailed visual representation of the labyrinth map for frontend visualization
 @router.get('/api/game-state/{session_id}/visual-map')
 async def get_visual_map(session_id: UUID, db: Session = Depends(get_db)):
-    # Convert UUID to string explicitly for consistent database querying
+    # Explicitly convert UUID to string for consistent database querying
     session_id_str = str(session_id)
 
-    # Retrieve the game state entry explicitly from the database using session ID
+    # Retrieve the game state entry from the database explicitly using session ID
     game_state_entry = db.query(GameStateDB).filter(GameStateDB.session_id == session_id_str).first()
 
-    # Explicitly handle scenario where no game state is found for the provided session ID
+    # Explicitly handle the scenario where no game state is found for the provided session ID
     if not game_state_entry:
         raise HTTPException(status_code=404, detail="Game state not found.")
 
     # Parse the stored JSON game state explicitly
     game_state = game_state_entry.game_state
 
-    # Initialize container for visual tiles to be sent to frontend visualization
+    # Retrieve labyrinth ID explicitly from the game state
+    labyrinth_id = game_state['game_info']['labyrinth_id']
+
+    # Fetch all tiles explicitly associated with this labyrinth from the database
+    tiles_from_db = db.query(Tile).filter(Tile.labyrinth_id == labyrinth_id).all()
+
+    # Prepare container explicitly for visual tile representations for frontend visualization
     visual_tiles = []
 
-    # Iterate explicitly over each tile stored in the labyrinth structure
-    for tile_id, tile_info in game_state['labyrinth'].items():
-        # Explicitly sort directions to ensure consistent tile image filename generation
-        directions = sorted(tile_info['open_directions'])
+    # Iterate explicitly over each tile fetched from the database
+    for tile_db in tiles_from_db:
+        # Parse open directions from database, ensure sorted order explicitly for consistent filenames
+        directions = sorted(json.loads(tile_db.open_directions))
 
-        # Use existing helper to generate correct tile image filename based on tile type and open directions
-        tile_image = get_image_filename(tile_info['type'], directions)
+        # Generate explicit tile image filename based on tile type and open directions
+        tile_image = get_image_filename(tile_db.type, directions)
+
+        # Find corresponding tile from in-memory state to retrieve entities and map objects
+        tile_state = next((t for t in game_state['labyrinth'].values()
+                           if t['x'] == tile_db.x and t['y'] == tile_db.y), {})
 
         # Retrieve explicitly detailed entity data directly associated with this tile
         entities_on_tile = [
             {
-                "id": entity['id'],       # Unique identifier of the entity
-                "type": entity['type'],   # Entity type explicitly defined (player, enemy, npc)
+                "id": entity['id'],      # Unique identifier of the entity
+                "type": entity['type'],  # Explicit entity type (player, enemy, npc)
             }
-            for entity in tile_info.get('entities', [])
+            for entity in tile_state.get('entities', [])
         ]
 
-        # Structure tile information explicitly for frontend visualization
+        # Structure tile information explicitly for frontend visualization, taking all fields from DB
         visual_tile = {
-            "x": tile_info['x'],                   # X-coordinate explicitly on the labyrinth grid
-            "y": tile_info['y'],                   # Y-coordinate explicitly on the labyrinth grid
-            "image": tile_image,                   # Explicit image filename representing the tile visually
-            "revealed": tile_info.get('revealed', False),  # Explicit reveal state (can be used later)
-            "entities": entities_on_tile,          # Explicitly detailed entities present on this tile
-            "map_object": tile_info.get('map_object'),  # Explicit additional map object if applicable
-            "tile_code": tile_info.get('tile_code'),       # Thematic tile code (e.g., "C-NS")
-            "thematic_area": tile_info.get('thematic_area') # Thematic area (e.g., "Command")
+            "x": tile_db.x,                              # Explicit X-coordinate on the labyrinth grid
+            "y": tile_db.y,                              # Explicit Y-coordinate on the labyrinth grid
+            "image": tile_image,                         # Explicit image filename representing the tile visually
+            "revealed": tile_db.revealed,                # Explicitly from DB to ensure correctness
+            "entities": entities_on_tile,                # Entities explicitly retrieved from game state
+            "map_object": tile_state.get('map_object'),  # Explicit additional map object if applicable
+            "tile_code": tile_db.tile_code,              # Thematic tile code explicitly from DB
+            "thematic_area": tile_db.thematic_area       # Thematic area explicitly from DB
         }
 
-        # Append explicitly prepared tile data to the visual tiles container
+        # Append explicitly prepared tile data to visual tiles container
         visual_tiles.append(visual_tile)
 
     # Explicitly return structured visual tiles data for frontend rendering
     return {"tiles": visual_tiles}
-
