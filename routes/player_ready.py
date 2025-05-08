@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from models.game_session import GameSession
 from models.mobile_client import MobileClient
 from realtime import broadcast_session_update
-from utils.db_utils import get_db
+from db.session import get_db
 from game_logic.validation.sync_validator import validate_sync  # Explicitly imported validation logic
 
 router = APIRouter()
