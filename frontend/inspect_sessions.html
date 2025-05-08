@@ -137,59 +137,63 @@ async function displaySessionMapOverlay(sessionId, containerId) {
     yLabel.innerText = y;
     row.appendChild(yLabel);
 
-    for (let x = 0; x < size; x++) {
-      const tile = tiles.find(t => t.x === x && t.y === y);
-      const tileDiv = document.createElement("div");
-      tileDiv.style.position = "relative";
-      tileDiv.style.width = "80px";
-      tileDiv.style.height = "80px";
+for (let x = 0; x < size; x++) {
+  const tile = tiles.find(t => t.x === x && t.y === y);
+  const tileDiv = document.createElement("div");
+  tileDiv.style.position = "relative";
+  tileDiv.style.width = "80px";
+  tileDiv.style.height = "80px";
+  tileDiv.style.overflow = "hidden";
 
-      // Base tile image
-      const img = document.createElement("img");
-      img.className = "tile-img";
-      img.src = `/tiles/${tile.image}`;
-      img.style.display = "block";
-      tileDiv.appendChild(img);
+  // Base tile image explicitly sized
+  const img = document.createElement("img");
+  img.className = "tile-img";
+  img.src = `/tiles/${tile.image}`;
+  img.style.width = "100%";
+  img.style.height = "100%";
+  img.style.display = "block";
+  tileDiv.appendChild(img);
 
-      // Overlay thematic color based on CMYK coding
-      const overlayColorMap = {
-        'C': 'rgba(0, 255, 255, 0.5)',    // Cyan
-        'M': 'rgba(255, 0, 255, 0.5)',    // Magenta
-        'Y': 'rgba(255, 255, 0, 0.5)',    // Yellow
-        'K': 'rgba(0, 0, 0, 0.5)'         // Black
-      };
+  // Overlay thematic color based on CMYK coding
+  const overlayColorMap = {
+    'C': 'rgba(0, 255, 255, 0.5)',    // Cyan
+    'M': 'rgba(255, 0, 255, 0.5)',    // Magenta
+    'Y': 'rgba(255, 255, 0, 0.5)',    // Yellow
+    'K': 'rgba(0, 0, 0, 0.5)'         // Black
+  };
 
-      const themeCode = tile.tile_code ? tile.tile_code.split('-')[0] : '';
-      const overlayColor = overlayColorMap[themeCode] || 'rgba(255,255,255,0.3)';
+  const themeCode = tile.tile_code ? tile.tile_code.split('-')[0] : '';
+  const overlayColor = overlayColorMap[themeCode] || 'rgba(255,255,255,0.3)';
 
-      const colorOverlay = document.createElement("div");
-      colorOverlay.style.position = "absolute";
-      colorOverlay.style.top = "0";
-      colorOverlay.style.left = "0";
-      colorOverlay.style.width = "100%";
-      colorOverlay.style.height = "100%";
-      colorOverlay.style.backgroundColor = overlayColor;
-      colorOverlay.style.zIndex = "1";  // explicitly set z-index
-      tileDiv.appendChild(colorOverlay);
+  const colorOverlay = document.createElement("div");
+  colorOverlay.style.position = "absolute";
+  colorOverlay.style.top = "0";
+  colorOverlay.style.left = "0";
+  colorOverlay.style.width = "100%";
+  colorOverlay.style.height = "100%";
+  colorOverlay.style.backgroundColor = overlayColor;
+  colorOverlay.style.zIndex = "1";
+  tileDiv.appendChild(colorOverlay);
 
-      // Tile code displayed explicitly at center on top of overlay
-      const codeLabel = document.createElement("div");
-      codeLabel.style.position = "absolute";
-      codeLabel.style.top = "50%";
-      codeLabel.style.left = "50%";
-      codeLabel.style.transform = "translate(-50%, -50%)";
-      codeLabel.style.fontWeight = "bold";
-      codeLabel.style.color = "#000";
-      codeLabel.style.backgroundColor = "rgba(255,255,255,0.7)";
-      codeLabel.style.padding = "2px 4px";
-      codeLabel.style.borderRadius = "3px";
-      codeLabel.style.fontSize = "12px";
-      codeLabel.style.zIndex = "2";  // explicitly ensure it’s above the overlay
-      codeLabel.innerText = tile.tile_code || '';
-      tileDiv.appendChild(codeLabel);
+  // Tile code label explicitly centered above overlays
+  const codeLabel = document.createElement("div");
+  codeLabel.style.position = "absolute";
+  codeLabel.style.top = "50%";
+  codeLabel.style.left = "50%";
+  codeLabel.style.transform = "translate(-50%, -50%)";
+  codeLabel.style.fontWeight = "bold";
+  codeLabel.style.color = "#000";
+  codeLabel.style.backgroundColor = "rgba(255,255,255,0.7)";
+  codeLabel.style.padding = "2px 4px";
+  codeLabel.style.borderRadius = "3px";
+  codeLabel.style.fontSize = "12px";
+  codeLabel.style.zIndex = "2";
+  codeLabel.innerText = tile.tile_code || '';
+  tileDiv.appendChild(codeLabel);
 
-      row.appendChild(tileDiv);
-    }
+  row.appendChild(tileDiv);
+}
+
     mapWrapper.appendChild(row);
   }
 
