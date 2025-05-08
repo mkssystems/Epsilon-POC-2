@@ -155,7 +155,7 @@ async function displaySessionMapOverlay(sessionId, containerId) {
         'K': 'rgba(0, 0, 0, 0.5)'         // Black
       };
 
-      const themeCode = tile.tile_code.split('-')[0];
+      const themeCode = tile.tile_code ? tile.tile_code.split('-')[0] : '';
       const overlayColor = overlayColorMap[themeCode] || 'rgba(255,255,255,0.5)';
 
       const colorOverlay = document.createElement("div");
