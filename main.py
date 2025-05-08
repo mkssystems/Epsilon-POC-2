@@ -50,16 +50,16 @@ def startup():
         if FORCE_REINIT_DB:
             print("⚠️ Reinitializing the database from scratch...")
 
-            # Open one explicit transaction for performance
+            # Open explicit transaction
             with engine.begin() as connection:
-                # Drop and recreate tables in one transaction explicitly
+                # Drop and recreate tables explicitly
                 EntityBase.metadata.drop_all(bind=connection)
                 print("✅ Tables dropped successfully.")
                 
                 EntityBase.metadata.create_all(bind=connection)
                 print("✅ Tables created successfully.")
 
-                # Explicitly cache CSV data as globals to avoid repeated loading
+                # Explicitly cache CSV data globally to avoid repeated file reads
                 global cached_data
                 try:
                     cached_data
@@ -72,13 +72,19 @@ def startup():
                         "map_objects": pd.read_csv("assets/seed/map_objects.csv"),
                     }
 
-                # Perform explicit bulk insert for high performance
-                load_data_bulk(connection, cached_data)
+                # Explicitly call your existing load_data function
+                load_data(connection, 
+                          cached_data["entities"], 
+                          cached_data["equipment"], 
+                          cached_data["skills"], 
+                          cached_data["specials"], 
+                          cached_data["map_objects"])
                 print("✅ Seed data loaded successfully.")
 
             print("🚀 Database initialization complete and successful.")
 
     threading.Thread(target=init_db).start()
+
 
 
 
