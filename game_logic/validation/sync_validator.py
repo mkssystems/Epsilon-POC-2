@@ -1,11 +1,13 @@
 # game_logic/validation/sync_validator.py
+
 from sqlalchemy.orm import Session
 from game_logic.data.game_state import GameState
-from utils.db_utils import retrieve_game_state_from_db
+from utils.db_utils import load_initial_game_state  # Corrected import to existing function
 
 def validate_sync(session_id: str, client_turn: int, client_phase: str, db_session: Session):
     """
     Explicitly validate synchronization between mobile and backend states.
+
     Args:
         session_id: Explicit session ID of the game.
         client_turn: Turn number explicitly reported by mobile client.
@@ -16,7 +18,7 @@ def validate_sync(session_id: str, client_turn: int, client_phase: str, db_sessi
         dict: Explicit validation result with sync status and details.
     """
     # Retrieve authoritative game state explicitly from backend
-    game_state: GameState = retrieve_game_state_from_db(db_session, session_id)
+    game_state: GameState = load_initial_game_state(db_session, session_id)
 
     if not game_state:
         return {"status": "error", "detail": "Game state not found."}
@@ -27,7 +29,7 @@ def validate_sync(session_id: str, client_turn: int, client_phase: str, db_sessi
     # Explicit check for state synchronization
     if client_turn == backend_turn and client_phase == backend_phase:
         return {"status": "ok"}
-    
+
     # Explicit mismatch details for debugging and mobile resync
     return {
         "status": "mismatch",
