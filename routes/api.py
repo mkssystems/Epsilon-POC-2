@@ -19,6 +19,8 @@ from game_logic.models.game_state_db import GameStateDB
 from db.session import get_db  # Your existing DB session handler explicitly
 from game_logic.game_flow_controller import GameFlowController
 from models.tile import Tile
+import json  # explicitly import json
+
 
 
 
