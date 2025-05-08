@@ -56,7 +56,7 @@ def apply_thematic_overlay(tiles):
     # Build adjacency map explicitly for clustering
     adjacency_map = build_adjacency_map(tiles)
 
-    # Explicitly shuffle tiles to randomize starting points for thematic areas
+    # Explicitly shuffle tiles to randomize starting points
     random.shuffle(tiles)
 
     # Set explicitly all tiles as initially unassigned
@@ -79,7 +79,6 @@ def apply_thematic_overlay(tiles):
             if current_tile not in unassigned_tiles:
                 continue
 
-            # Explicitly assign thematic area and tile code
             sorted_directions = ''.join(sorted(current_tile.open_directions))
             current_tile.thematic_area = THEMATIC_AREA_NAMES[theme_code]
             current_tile.tile_code = f"{theme_code}-{sorted_directions}"
@@ -87,13 +86,11 @@ def apply_thematic_overlay(tiles):
             unassigned_tiles.remove(current_tile)
             assigned += 1
 
-            # Explicitly enqueue neighbors for BFS traversal
             for neighbor in adjacency_map[current_tile]:
                 if neighbor in unassigned_tiles and neighbor not in queue:
                     queue.append(neighbor)
 
-        # In rare cases, explicitly handle if clustering didn't fully assign the required tiles
-        # This could happen due to isolated clusters or rounding discrepancies
+        # Handle explicitly if clustering didn't fully assign required tiles
         if assigned < count:
             for tile in unassigned_tiles.copy():
                 if assigned >= count:
@@ -104,5 +101,12 @@ def apply_thematic_overlay(tiles):
                 assigned += 1
                 unassigned_tiles.remove(tile)
 
-    # Return explicitly updated tiles with thematic assignments
+    # ⚠️ New Final Explicit Pass: Ensure NO tiles are left unassigned
+    if unassigned_tiles:
+        default_theme_code = 'M'  # or any default code you'd like to use
+        for tile in unassigned_tiles:
+            sorted_directions = ''.join(sorted(tile.open_directions))
+            tile.thematic_area = THEMATIC_AREA_NAMES[default_theme_code]
+            tile.tile_code = f"{default_theme_code}-{sorted_directions}"
+
     return tiles
