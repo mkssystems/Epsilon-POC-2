@@ -31,8 +31,9 @@ from state import session_readiness, lock
 
 from config import DATABASE_URL
 
-# Import API router
+# Import API routers
 from routes.api import router as api_router
+from routes.player_ready import router as player_ready_router
 
 # Import for real-time socket
 from realtime import mount_websocket_routes, broadcast_session_update
@@ -210,6 +211,7 @@ mount_websocket_routes(app)
 
 # Include API router SECOND
 app.include_router(api_router)
+app.include_router(player_ready_router)
 
 # Mount static files LAST
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
