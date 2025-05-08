@@ -100,6 +100,34 @@ def mount_websocket_routes(app):
                         await websocket.close()
                         await disconnect_from_session(session_id, websocket)
                         break
+
+                elif data.get('type') == 'intro_completed':
+                    with lock:
+                        if session_id not in session_readiness:
+                            session_readiness[session_id] = {}
+                        session_readiness[session_id][client_id] = True
+                
+                        # Explicitly update players' readiness status
+                        players = [
+                            PlayerStatus(client_id=cid, ready=ready)
+                            for cid, ready in session_readiness[session_id].items()
+                        ]
+                        all_ready = all(player.ready for player in players)
+                
+                        # Explicitly broadcast updated session status
+                        session_status = SessionStatus(players=players, all_ready=all_ready)
+                        await broadcast_session_update(session_id, session_status.dict())
+                
+                        # Explicitly notify if all players are ready
+                        if all_ready:
+                            await broadcast_session_update(session_id, {
+                                "event": "all_players_ready",
+                                "message": "All players have completed the intro."
+                            })
+                
+                    print(f"[INFO] Player {client_id} explicitly marked as ready in session {session_id}.")
+
+                
                 else:
                     last_non_ping_time = time.time()
                     await websocket.send_json({"type": "error", "message": "Unknown action provided."})
