@@ -473,8 +473,8 @@ async def get_visual_map(session_id: UUID, db: Session = Depends(get_db)):
 
     # Iterate explicitly over each tile fetched from the database
     for tile_db in tiles_from_db:
-        # Parse open directions from database, ensure sorted order explicitly for consistent filenames
-        directions = sorted(json.loads(tile_db.open_directions))
+        # open_directions already deserialized to a list, sort explicitly for consistent filenames
+        directions = sorted(tile_db.open_directions)
 
         # Generate explicit tile image filename based on tile type and open directions
         tile_image = get_image_filename(tile_db.type, directions)
