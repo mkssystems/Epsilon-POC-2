@@ -1,6 +1,15 @@
 import json
 from datetime import datetime
 import os
+from enum import Enum  # Explicit import for serializer consistency
+
+# Custom serializer explicitly handling datetime and Enum serialization
+def json_serializer(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, Enum):
+        return obj.value
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 def log_game_state(session_id: str, game_state: dict):
     """
@@ -10,21 +19,21 @@ def log_game_state(session_id: str, game_state: dict):
         session_id (str): Unique identifier for the game session.
         game_state (dict): Serialized game state dictionary explicitly provided.
     """
-    # Explicitly define the absolute path for persistent logging on Render
+    # Explicitly set directory path for Render persistent disk
     logs_dir = "/var/data/game_state_logs"
 
-    # Explicitly ensure the logs directory exists on the persistent disk, creating if necessary
+    # Ensure the logs directory explicitly exists, create if necessary
     os.makedirs(logs_dir, exist_ok=True)
-
-    # Explicitly construct the log file path using the session ID
+    
+    # Explicitly define log file path per session ID
     log_file_path = os.path.join(logs_dir, f"{session_id}_game_state.log")
 
-    # Explicitly prepare the log entry including a timestamp for clarity and debugging
+    # Prepare log entry with an explicit timestamp for clarity
     log_entry = {
-        "logged_at": datetime.utcnow().isoformat(),
+        "logged_at": datetime.utcnow(),
         "game_state": game_state
     }
 
-    # Explicitly append the serialized log entry as JSON to the log file
+    # Append explicitly serialized JSON log entry to the log file with custom serializer
     with open(log_file_path, "a") as log_file:
-        log_file.write(json.dumps(log_entry) + "\n")
+        log_file.write(json.dumps(log_entry, default=json_serializer) + "\n")
