@@ -9,6 +9,7 @@ from schemas import PlayerStatus, SessionStatus
 from config import WEBSOCKET_INACTIVITY_TIMEOUT, WEBSOCKET_PING_ONLY_TIMEOUT
 from fastapi import APIRouter
 import time
+from datetime import datetime
 
 active_connections: Dict[str, List[Dict]] = {}
 
@@ -40,13 +41,21 @@ async def disconnect_from_session(session_id: str, websocket: WebSocket):
 
 async def broadcast_session_update(session_id: str, message: dict):
     if not isinstance(message, dict):
-        print(f"[ERROR] Explicitly invalid broadcast message (not dict): {message}")
-        return  # Explicitly prevent broadcasting invalid data
+        print(f"[ERROR] Invalid message: {message}")
+        return
+
+    # Explicitly convert datetime to string
+    def datetime_converter(o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        raise TypeError(f"Type {type(o)} not serializable")
+
+    serialized_message = json.loads(json.dumps(message, default=datetime_converter))
 
     if session_id in active_connections:
         for connection in active_connections[session_id]:
             try:
-                await connection["websocket"].send_json(message)
+                await connection["websocket"].send_json(serialized_message)
             except Exception as e:
                 print(f"[ERROR] WebSocket send_json exception: {e}")
 
