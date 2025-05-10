@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from enum import Enum
 from utils.game_state_logger import log_game_state  # Explicitly import logging utility
-from models.game_entities import Tile, TileEntity, EntityDetail
+from game_logic.data.game_state import Tile, TileEntity, EntityDetail
 
 
 # Explicit helper function to convert datetime and enum to string
