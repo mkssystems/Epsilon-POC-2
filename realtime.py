@@ -90,9 +90,11 @@ def mount_websocket_routes(app):
         try:
             while True:
                 try:
+                    # Receive raw message with timeout
                     message_text = await asyncio.wait_for(
                         websocket.receive_text(), timeout=WEBSOCKET_INACTIVITY_TIMEOUT
                     )
+                    print(f"[DEBUG] Raw WebSocket message from client {client_id}: {message_text}")
                 except asyncio.TimeoutError:
                     print(f"[INFO] Connection to client {client_id} in session {session_id} closed due to inactivity.")
                     await websocket.close()
@@ -100,15 +102,18 @@ def mount_websocket_routes(app):
                     break
 
                 try:
+                    # Parse received message as JSON
                     data_dict = json.loads(message_text)
                     if not isinstance(data_dict, dict):
-                        raise ValueError("Parsed JSON is not an object.")
+                        raise ValueError(f"Parsed JSON is not an object: type={type(data_dict)}")
                 except (json.JSONDecodeError, ValueError) as e:
-                    print(f"[ERROR] JSON parse error: {e}")
+                    print(f"[ERROR] JSON parse error from client {client_id}: {e}, original message: {message_text}")
                     await websocket.send_json({"type": "error", "message": "Invalid JSON format."})
                     continue
 
-                if data_dict.get('type') == 'ping':
+                message_type = data_dict.get('type')
+
+                if message_type == 'ping':
                     await websocket.send_json({"type": "pong"})
                     print(f"[INFO] Received 'ping' from client {client_id} (session: {session_id})")
                     if (time.time() - last_non_ping_time) > WEBSOCKET_PING_ONLY_TIMEOUT:
@@ -117,7 +122,7 @@ def mount_websocket_routes(app):
                         await disconnect_from_session(session_id, websocket)
                         break
 
-                elif data_dict.get('type') == 'intro_completed':
+                elif message_type == 'intro_completed':
                     with lock:
                         if session_id not in session_readiness:
                             session_readiness[session_id] = {}
@@ -142,7 +147,8 @@ def mount_websocket_routes(app):
 
                 else:
                     last_non_ping_time = time.time()
-                    await websocket.send_json({"type": "error", "message": "Unknown action provided."})
+                    await websocket.send_json({"type": "error", "message": f"Unknown action '{message_type}' provided."})
+                    print(f"[WARN] Unknown action received from client {client_id}: {data_dict}")
 
         except WebSocketDisconnect:
             print(f"[INFO] WebSocketDisconnect by client {client_id} (session: {session_id})")
@@ -150,7 +156,5 @@ def mount_websocket_routes(app):
         except Exception as e:
             print(f"[ERROR] Unexpected error for client {client_id} (session: {session_id}): {e}")
             await disconnect_from_session(session_id, websocket)
-
-    app.include_router(router)
 
     app.include_router(router)
