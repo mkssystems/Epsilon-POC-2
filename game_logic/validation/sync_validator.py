@@ -1,8 +1,7 @@
 # game_logic/validation/sync_validator.py
 
 from sqlalchemy.orm import Session
-from game_logic.data.game_state import GameState
-from utils.db_utils import load_initial_game_state  # Corrected import to existing function
+from utils.db_utils import load_initial_game_state
 
 def validate_sync(session_id: str, client_turn: int, client_phase: str, db_session: Session):
     """
@@ -17,14 +16,22 @@ def validate_sync(session_id: str, client_turn: int, client_phase: str, db_sessi
     Returns:
         dict: Explicit validation result with sync status and details.
     """
-    # Retrieve authoritative game state explicitly from backend
-    game_state: GameState = load_initial_game_state(db_session, session_id)
+    # Retrieve authoritative game state explicitly from backend as a dictionary
+    game_state_dict = load_initial_game_state(db_session, session_id)
 
-    if not game_state:
+    if not game_state_dict:
         return {"status": "error", "detail": "Game state not found."}
 
-    backend_turn = game_state.turn.number
-    backend_phase = game_state.phase.name.value
+    try:
+        # Explicit dictionary key access instead of attribute access
+        backend_turn = game_state_dict['turn']['number']
+        backend_phase = game_state_dict['phase']['name']
+    except KeyError as e:
+        # Explicitly handle missing keys
+        return {
+            "status": "error",
+            "detail": f"Malformed game state explicitly detected: missing key {e}"
+        }
 
     # Explicit check for state synchronization
     if client_turn == backend_turn and client_phase == backend_phase:
