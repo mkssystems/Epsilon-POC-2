@@ -39,12 +39,16 @@ async def disconnect_from_session(session_id: str, websocket: WebSocket):
             del active_connections[session_id]
 
 async def broadcast_session_update(session_id: str, message: dict):
+    if not isinstance(message, dict):
+        print(f"[ERROR] Explicitly invalid broadcast message (not dict): {message}")
+        return  # Explicitly prevent broadcasting invalid data
+
     if session_id in active_connections:
         for connection in active_connections[session_id]:
             try:
                 await connection["websocket"].send_json(message)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[ERROR] WebSocket send_json exception: {e}")
 
 async def broadcast_game_started(session_id: str):
     message = {"event": "game_started"}
