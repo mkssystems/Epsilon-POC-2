@@ -28,7 +28,6 @@ async def player_ready(session_id: str, payload: dict, db: Session = Depends(get
     validation_result = validate_sync(session_id, client_turn, client_phase, db)
 
     if validation_result["status"] == "mismatch":
-        # Explicit mismatch response
         raise HTTPException(status_code=409, detail={
             "detail": "State mismatch explicitly detected.",
             "backend_turn": validation_result["backend_turn"],
@@ -39,22 +38,22 @@ async def player_ready(session_id: str, payload: dict, db: Session = Depends(get
     elif validation_result["status"] == "error":
         raise HTTPException(status_code=500, detail=validation_result["detail"])
 
-    # Explicitly handle readiness confirmation
+    # Corrected explicit query to match client properly
     client = db.query(MobileClient).filter(
-        MobileClient.id == client_id, 
-        MobileClient.session_id == session_id
+        MobileClient.client_id == client_id,
+        MobileClient.game_session_id == session_id
     ).first()
 
     if not client:
         raise HTTPException(status_code=404, detail="Client explicitly not found for this session.")
 
-    client.is_ready = True  # Explicitly mark client as ready
+    client.is_ready = True
     db.commit()
 
-    # Explicitly check if all players are ready
-    all_clients = db.query(MobileClient).filter(MobileClient.session_id == session_id).all()
+    # Explicit check if all players are ready
+    all_clients = db.query(MobileClient).filter(MobileClient.game_session_id == session_id).all()
+
     if all(client.is_ready for client in all_clients):
-        # Explicitly broadcast that all players are ready
         await broadcast_session_update(session_id, {
             "event": "all_players_ready",
             "session_id": session_id
