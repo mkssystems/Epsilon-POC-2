@@ -169,18 +169,33 @@ def execute_turn_zero(db_session, session_id):
     entities = define_initial_entity_details(db_session, entities_positions, player_entities_with_clients)
 
     game_state = GameState(
-        game_info=GameInfo(session_id=session_id, scenario=scenario_name, labyrinth_id=str(labyrinth_id), size=size, seed=seed),
+        game_info=GameInfo(
+            session_id=session_id,
+            scenario=scenario_name,
+            labyrinth_id=str(labyrinth_id),
+            size=size,
+            seed=seed
+        ),
         turn=turn_info,
         phase=phase_info,
         labyrinth=labyrinth,
         entities=entities
     )
-
+    
+    # Explicitly serialize the game state
+    game_state_dict = game_state.to_json()
+    
     try:
         save_game_state_to_db(db_session, game_state)
         print(f"[INFO] Game state explicitly saved successfully.")
     except Exception as e:
         print(f"[ERROR] Game state saving failed explicitly: {e}")
         raise
-
-    print(f"[INFO] Turn 0 explicitly initialized for session '{session_id}'")
+    
+    # Explicitly broadcast the correct, serialized game state
+    asyncio.create_task(broadcast_session_update(session_id, {
+        "event": "game_state_initialized",
+        "game_state": game_state_dict
+    }))
+    
+    print(f"[INFO] Turn 0 explicitly initialized and broadcasted for session '{session_id}'")
