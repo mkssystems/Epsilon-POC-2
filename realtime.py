@@ -1,27 +1,17 @@
-
 # realtime.py
 
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from typing import Dict, List
 import asyncio
 import json
 from state import session_readiness, lock
 from schemas import PlayerStatus, SessionStatus
 from config import WEBSOCKET_INACTIVITY_TIMEOUT, WEBSOCKET_PING_ONLY_TIMEOUT
-from fastapi import APIRouter
 import time
 from datetime import datetime
-import enum  # Added explicitly for handling Enums
+from enum import Enum
 
 active_connections: Dict[str, List[Dict]] = {}
-
-# Custom serializer to handle datetime and Enum types explicitly
-def custom_json_serializer(obj):
-    if isinstance(obj, datetime):
-        return obj.isoformat()
-    elif isinstance(obj, enum.Enum):
-        return obj.value
-    raise TypeError(f"Type {type(obj)} not serializable")
 
 async def connect_to_session(session_id: str, client_id: str, websocket: WebSocket):
     await websocket.accept()
@@ -35,7 +25,6 @@ async def connect_to_session(session_id: str, client_id: str, websocket: WebSock
             for cid, ready in session_readiness.get(session_id, {}).items()
         ]
         all_ready = all(player.ready for player in players) if players else False
-
         session_status = SessionStatus(players=players, all_ready=all_ready)
         await broadcast_session_update(session_id, session_status.dict())
 
@@ -45,16 +34,23 @@ async def disconnect_from_session(session_id: str, websocket: WebSocket):
             conn for conn in active_connections[session_id]
             if conn["websocket"] != websocket
         ]
-
         if not active_connections[session_id]:
             del active_connections[session_id]
+
+# Serializer to handle special data types (datetime, enum)
+def custom_serializer(o):
+    if isinstance(o, datetime):
+        return o.isoformat()
+    if isinstance(o, Enum):
+        return o.value
+    raise TypeError(f"Type {type(o)} not serializable")
 
 async def broadcast_session_update(session_id: str, message: dict):
     if not isinstance(message, dict):
         print(f"[ERROR] Invalid message: {message}")
         return
 
-    serialized_message = json.loads(json.dumps(message, default=custom_json_serializer))
+    serialized_message = json.loads(json.dumps(message, default=custom_serializer))
 
     if session_id in active_connections:
         for connection in active_connections[session_id]:
@@ -98,7 +94,7 @@ def mount_websocket_routes(app):
                         websocket.receive_text(), timeout=WEBSOCKET_INACTIVITY_TIMEOUT
                     )
                 except asyncio.TimeoutError:
-                    print(f"[INFO] Connection to client {client_id} in session {session_id} explicitly closed due to inactivity.")
+                    print(f"[INFO] Connection to client {client_id} in session {session_id} closed due to inactivity.")
                     await websocket.close()
                     await disconnect_from_session(session_id, websocket)
                     break
@@ -108,15 +104,15 @@ def mount_websocket_routes(app):
                     if not isinstance(data_dict, dict):
                         raise ValueError("Parsed JSON is not an object.")
                 except (json.JSONDecodeError, ValueError) as e:
-                    print(f"[ERROR] JSON parse error explicitly: {e}")
+                    print(f"[ERROR] JSON parse error: {e}")
                     await websocket.send_json({"type": "error", "message": "Invalid JSON format."})
                     continue
 
                 if data_dict.get('type') == 'ping':
-                    print(f"[INFO] Received 'ping' from client {client_id} (session: {session_id})")
                     await websocket.send_json({"type": "pong"})
+                    print(f"[INFO] Received 'ping' from client {client_id} (session: {session_id})")
                     if (time.time() - last_non_ping_time) > WEBSOCKET_PING_ONLY_TIMEOUT:
-                        print(f"[INFO] Connection explicitly closed (ping-only) for client {client_id}, session {session_id}.")
+                        print(f"[INFO] Connection closed (ping-only) for client {client_id}, session {session_id}.")
                         await websocket.close()
                         await disconnect_from_session(session_id, websocket)
                         break
@@ -142,18 +138,19 @@ def mount_websocket_routes(app):
                                 "message": "All players have completed the intro."
                             })
 
-                    print(f"[INFO] Player {client_id} explicitly marked as ready in session {session_id}.")
+                    print(f"[INFO] Player {client_id} marked as ready in session {session_id}.")
 
                 else:
                     last_non_ping_time = time.time()
                     await websocket.send_json({"type": "error", "message": "Unknown action provided."})
 
         except WebSocketDisconnect:
-            print(f"[INFO] WebSocketDisconnect explicitly triggered by client {client_id} (session: {session_id})")
+            print(f"[INFO] WebSocketDisconnect by client {client_id} (session: {session_id})")
+            await disconnect_from_session(session_id, websocket)
+        except Exception as e:
+            print(f"[ERROR] Unexpected error for client {client_id} (session: {session_id}): {e}")
             await disconnect_from_session(session_id, websocket)
 
-        except Exception as e:
-            print(f"[ERROR] Unexpected error explicitly occurred for client {client_id} (session: {session_id}): {str(e)}")
-            await disconnect_from_session(session_id, websocket)
+    app.include_router(router)
 
     app.include_router(router)
