@@ -8,6 +8,8 @@ import json
 from datetime import datetime
 from enum import Enum
 from utils.game_state_logger import log_game_state  # Explicitly import logging utility
+from models.game_entities import Tile
+
 
 # Explicit helper function to convert datetime and enum to string
 def json_serializer(obj):
