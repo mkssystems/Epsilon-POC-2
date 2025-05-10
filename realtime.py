@@ -90,13 +90,17 @@ def mount_websocket_routes(app):
                     await disconnect_from_session(session_id, websocket)
                     break
 
+                # Explicitly parse incoming WebSocket message as JSON
                 try:
-                    data = json.loads(message_text)
-                except json.JSONDecodeError:
+                    data_dict = json.loads(message_text)
+                    if not isinstance(data_dict, dict):
+                        raise ValueError("Parsed JSON is not an object.")
+                except (json.JSONDecodeError, ValueError) as e:
+                    print(f"[ERROR] JSON parse error explicitly: {e}")
                     await websocket.send_json({"type": "error", "message": "Invalid JSON format."})
                     continue
 
-                if data.get('type') == 'ping':
+                if data_dict.get('type') == 'ping':
                     print(f"[INFO] Received 'ping' from client {client_id} (session: {session_id})")
                     await websocket.send_json({"type": "pong"})
                     if (time.time() - last_non_ping_time) > WEBSOCKET_PING_ONLY_TIMEOUT:
@@ -105,33 +109,32 @@ def mount_websocket_routes(app):
                         await disconnect_from_session(session_id, websocket)
                         break
 
-                elif data.get('type') == 'intro_completed':
+                elif data_dict.get('type') == 'intro_completed':
                     with lock:
                         if session_id not in session_readiness:
                             session_readiness[session_id] = {}
                         session_readiness[session_id][client_id] = True
-                
+
                         # Explicitly update players' readiness status
                         players = [
                             PlayerStatus(client_id=cid, ready=ready)
                             for cid, ready in session_readiness[session_id].items()
                         ]
                         all_ready = all(player.ready for player in players)
-                
+
                         # Explicitly broadcast updated session status
                         session_status = SessionStatus(players=players, all_ready=all_ready)
                         await broadcast_session_update(session_id, session_status.dict())
-                
+
                         # Explicitly notify if all players are ready
                         if all_ready:
                             await broadcast_session_update(session_id, {
                                 "event": "all_players_ready",
                                 "message": "All players have completed the intro."
                             })
-                
+
                     print(f"[INFO] Player {client_id} explicitly marked as ready in session {session_id}.")
 
-                
                 else:
                     last_non_ping_time = time.time()
                     await websocket.send_json({"type": "error", "message": "Unknown action provided."})
