@@ -53,10 +53,62 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
     db_entry = session.query(GameStateDB).filter_by(session_id=session_id).first()
 
     if db_entry:
+        # Explicitly deserialize nested dictionaries into dataclass instances
         game_state_dict = db_entry.game_state
-        game_state = GameState(**game_state_dict)
+        
+        # Explicitly reconstructing GameInfo
+        game_info = GameInfo(**game_state_dict['game_info'])
+
+        # Explicitly reconstructing TurnInfo with proper datetime parsing
+        turn_info = TurnInfo(
+            number=game_state_dict['turn']['number'],
+            started_at=datetime.fromisoformat(game_state_dict['turn']['started_at'])
+        )
+
+        # Explicitly reconstructing PhaseInfo with proper Enum and datetime parsing
+        phase_info = PhaseInfo(
+            name=GamePhaseName(game_state_dict['phase']['name']),
+            number=game_state_dict['phase'].get('number'),
+            is_end_turn=game_state_dict['phase']['is_end_turn'],
+            started_at=datetime.fromisoformat(game_state_dict['phase']['started_at'])
+        )
+
+        # Explicitly reconstructing Labyrinth Tiles and Entities
+        labyrinth = {
+            tile_id: Tile(
+                x=tile_data['x'],
+                y=tile_data['y'],
+                type=tile_data['type'],
+                revealed=tile_data['revealed'],
+                open_directions=tile_data['open_directions'],
+                effect_keyword=tile_data.get('effect_keyword'),
+                entities=[
+                    TileEntity(**entity) for entity in tile_data.get('entities', [])
+                ],
+                map_object=tile_data.get('map_object')
+            )
+            for tile_id, tile_data in game_state_dict.get('labyrinth', {}).items()
+        }
+
+        # Explicitly reconstructing detailed Entities
+        entities = {
+            entity_id: EntityDetail(
+                type=entity_data['type'],
+                controlled_by_user_id=entity_data.get('controlled_by_user_id')
+            )
+            for entity_id, entity_data in game_state_dict.get('entities', {}).items()
+        }
+
+        # Finally, explicitly reconstructing the complete GameState
+        game_state = GameState(
+            game_info=game_info,
+            turn=turn_info,
+            phase=phase_info,
+            labyrinth=labyrinth,
+            entities=entities
+        )
     else:
-        # Explicitly initialize a default game state structure
+        # Explicitly initialize a default game state if none exists
         game_info = GameInfo(
             session_id=session_id,
             scenario="Unknown",
