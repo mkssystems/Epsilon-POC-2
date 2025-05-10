@@ -1,3 +1,4 @@
+
 # realtime.py
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -10,8 +11,17 @@ from config import WEBSOCKET_INACTIVITY_TIMEOUT, WEBSOCKET_PING_ONLY_TIMEOUT
 from fastapi import APIRouter
 import time
 from datetime import datetime
+import enum  # Added explicitly for handling Enums
 
 active_connections: Dict[str, List[Dict]] = {}
+
+# Custom serializer to handle datetime and Enum types explicitly
+def custom_json_serializer(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, enum.Enum):
+        return obj.value
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 async def connect_to_session(session_id: str, client_id: str, websocket: WebSocket):
     await websocket.accept()
@@ -44,13 +54,7 @@ async def broadcast_session_update(session_id: str, message: dict):
         print(f"[ERROR] Invalid message: {message}")
         return
 
-    # Explicitly convert datetime to string
-    def datetime_converter(o):
-        if isinstance(o, datetime):
-            return o.isoformat()
-        raise TypeError(f"Type {type(o)} not serializable")
-
-    serialized_message = json.loads(json.dumps(message, default=datetime_converter))
+    serialized_message = json.loads(json.dumps(message, default=custom_json_serializer))
 
     if session_id in active_connections:
         for connection in active_connections[session_id]:
@@ -99,7 +103,6 @@ def mount_websocket_routes(app):
                     await disconnect_from_session(session_id, websocket)
                     break
 
-                # Explicitly parse incoming WebSocket message as JSON
                 try:
                     data_dict = json.loads(message_text)
                     if not isinstance(data_dict, dict):
@@ -124,18 +127,15 @@ def mount_websocket_routes(app):
                             session_readiness[session_id] = {}
                         session_readiness[session_id][client_id] = True
 
-                        # Explicitly update players' readiness status
                         players = [
                             PlayerStatus(client_id=cid, ready=ready)
                             for cid, ready in session_readiness[session_id].items()
                         ]
                         all_ready = all(player.ready for player in players)
 
-                        # Explicitly broadcast updated session status
                         session_status = SessionStatus(players=players, all_ready=all_ready)
                         await broadcast_session_update(session_id, session_status.dict())
 
-                        # Explicitly notify if all players are ready
                         if all_ready:
                             await broadcast_session_update(session_id, {
                                 "event": "all_players_ready",
