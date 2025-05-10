@@ -7,6 +7,7 @@ from datetime import datetime
 # Enumeration explicitly defining all possible phases in the game
 class GamePhaseName(Enum):
     TURN_0 = "TURN_0"
+    INITIAL_PLACEMENT = "INITIAL_PLACEMENT"
     ST_RETRIEVE_CURRENT_STATE = "ST_RETRIEVE_CURRENT_STATE"
     ST_CHECK_GAME_END_CONDITIONS = "ST_CHECK_GAME_END_CONDITIONS"
     ST_EXECUTE_ENVIRONMENT_LOGIC = "ST_EXECUTE_ENVIRONMENT_LOGIC"
