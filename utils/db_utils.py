@@ -1,4 +1,4 @@
-#utils/db_utils.py
+# utils/db_utils.py
 
 from sqlalchemy.orm import Session
 from game_logic.models.game_state_db import GameStateDB
@@ -6,17 +6,18 @@ from game_logic.data.game_state import GameState, GameInfo, TurnInfo, PhaseInfo,
 from config import SessionLocal
 import json
 from datetime import datetime
-from enum import Enum  # Explicitly import Enum class
+from enum import Enum
+from utils.game_state_logger import log_game_state  # Explicitly import logging utility
 
 # Explicit helper function to convert datetime and enum to string
 def json_serializer(obj):
     if isinstance(obj, datetime):
         return obj.isoformat()
     if isinstance(obj, Enum):
-        return obj.value  # Explicitly serialize enums by their value
+        return obj.value
     raise TypeError(f"Type {type(obj)} not serializable")
 
-# Explicitly saves game state to the database
+# Explicitly saves game state to the database and logs it for debugging
 def save_game_state_to_db(session: Session, game_state: GameState):
     state_dict = asdict(game_state)
     session_id = game_state.game_info.session_id
@@ -35,6 +36,10 @@ def save_game_state_to_db(session: Session, game_state: GameState):
     try:
         session.commit()
         print(f"[INFO] Game state explicitly saved successfully for session_id={session_id}")
+
+        # Explicitly log the saved game state
+        log_game_state(session_id, state_dict)
+
     except Exception as e:
         session.rollback()
         print(f"[ERROR] Failed to explicitly save game state: {e}")
@@ -59,12 +64,12 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
             size=0,
             seed=""
         )
-        
+
         turn_info = TurnInfo(
             number=0,
             started_at=datetime.utcnow()
         )
-        
+
         phase_info = PhaseInfo(
             name=GamePhaseName.TURN_0,
             number=None,
@@ -87,5 +92,8 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
         session.add(new_db_entry)
         session.commit()
         print(f"[INFO] Explicitly initialized new game state entry for session_id={session_id}")
+
+        # Explicitly log the initialized game state
+        log_game_state(session_id, asdict(game_state))
 
     return game_state
