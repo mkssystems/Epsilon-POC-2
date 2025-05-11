@@ -70,6 +70,7 @@ async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Se
     ).first()
 
     if existing_client:
+        print(f"[INFO] Explicit log: Client already connected: client_id={request.client_id}, session_id={session_id}")
         return {'message': 'Client already connected'}
 
     # Explicitly create new client entry with readiness set to False by default
@@ -83,6 +84,9 @@ async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Se
     db.add(new_client)
     db.commit()
     db.refresh(new_client)
+
+    # Explicit debug logging confirming successful join
+    print(f"[INFO] Client explicitly added: client_id={request.client_id}, session_id={session_id}")
 
     # Explicitly retrieve readiness status of all connected clients from DB
     all_clients = db.query(MobileClient).filter(MobileClient.game_session_id == session_id).all()
