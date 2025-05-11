@@ -1,6 +1,6 @@
 # realtime.py
 
-from fastapi import WebSocket, WebSocketDisconnect, APIRouter
+from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
 from typing import Dict, List
 import asyncio
 import json
@@ -10,23 +10,43 @@ from config import WEBSOCKET_INACTIVITY_TIMEOUT, WEBSOCKET_PING_ONLY_TIMEOUT
 import time
 from datetime import datetime
 from enum import Enum
+from db.session import get_db
 
 active_connections: Dict[str, List[Dict]] = {}
 
-async def connect_to_session(session_id: str, client_id: str, websocket: WebSocket):
+from sqlalchemy.orm import Session
+from models.mobile_client import MobileClient
+from schemas import PlayerStatus, SessionStatus
+from db.session import get_db  # Explicit DB session handler
+
+async def connect_to_session(session_id: str, client_id: str, websocket: WebSocket, db: Session):
+    # Accept WebSocket connection explicitly
     await websocket.accept()
+
+    # Register the WebSocket connection explicitly
     if session_id not in active_connections:
         active_connections[session_id] = []
     active_connections[session_id].append({"client_id": client_id, "websocket": websocket})
 
-    with lock:
-        players = [
-            PlayerStatus(client_id=cid, ready=ready)
-            for cid, ready in session_readiness.get(session_id, {}).items()
-        ]
-        all_ready = all(player.ready for player in players) if players else False
-        session_status = SessionStatus(players=players, all_ready=all_ready)
-        await broadcast_session_update(session_id, session_status.dict())
+    # Explicitly fetch readiness status directly from DB
+    all_clients = db.query(MobileClient).filter(
+        MobileClient.game_session_id == session_id
+    ).all()
+
+    # Construct players readiness from DB entries explicitly
+    players = [
+        PlayerStatus(client_id=client.client_id, ready=client.is_ready)
+        for client in all_clients
+    ]
+
+    # Explicitly calculate overall readiness state
+    all_ready = all(client.is_ready for client in all_clients)
+
+    session_status = SessionStatus(players=players, all_ready=all_ready)
+
+    # Explicitly broadcast readiness state retrieved from DB
+    await broadcast_session_update(session_id, session_status.dict())
+
 
 async def disconnect_from_session(session_id: str, websocket: WebSocket):
     if session_id in active_connections:
@@ -83,14 +103,13 @@ def mount_websocket_routes(app):
     router = APIRouter()
 
     @router.websocket("/ws/{session_id}/{client_id}")
-    async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str):
-        await connect_to_session(session_id, client_id, websocket)
+    async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str, db: Session = Depends(get_db)):
+        await connect_to_session(session_id, client_id, websocket, db)
         last_non_ping_time = time.time()
 
         try:
             while True:
                 try:
-                    # Receive raw message with timeout
                     message_text = await asyncio.wait_for(
                         websocket.receive_text(), timeout=WEBSOCKET_INACTIVITY_TIMEOUT
                     )
@@ -102,7 +121,6 @@ def mount_websocket_routes(app):
                     break
 
                 try:
-                    # Parse received message as JSON
                     data_dict = json.loads(message_text)
                     if not isinstance(data_dict, dict):
                         raise ValueError(f"Parsed JSON is not an object: type={type(data_dict)}")
@@ -123,18 +141,29 @@ def mount_websocket_routes(app):
                         break
 
                 elif message_type == 'intro_completed':
-                    with lock:
-                        if session_id not in session_readiness:
-                            session_readiness[session_id] = {}
-                        session_readiness[session_id][client_id] = True
+                    # DB-driven readiness update explicitly
+                    client_entry = db.query(MobileClient).filter(
+                        MobileClient.client_id == client_id,
+                        MobileClient.game_session_id == session_id
+                    ).first()
+
+                    if client_entry:
+                        client_entry.is_ready = True
+                        db.commit()
+
+                        all_clients = db.query(MobileClient).filter(
+                            MobileClient.game_session_id == session_id
+                        ).all()
 
                         players = [
-                            PlayerStatus(client_id=cid, ready=ready)
-                            for cid, ready in session_readiness[session_id].items()
+                            PlayerStatus(client_id=client.client_id, ready=client.is_ready)
+                            for client in all_clients
                         ]
-                        all_ready = all(player.ready for player in players)
+
+                        all_ready = all(client.is_ready for client in all_clients)
 
                         session_status = SessionStatus(players=players, all_ready=all_ready)
+
                         await broadcast_session_update(session_id, session_status.dict())
 
                         if all_ready:
@@ -143,7 +172,10 @@ def mount_websocket_routes(app):
                                 "message": "All players have completed the intro."
                             })
 
-                    print(f"[INFO] Player {client_id} marked as ready in session {session_id}.")
+                        print(f"[INFO] Player {client_id} marked as ready in session {session_id}.")
+                    else:
+                        await websocket.send_json({"type": "error", "message": "Client not found in session."})
+                        print(f"[WARN] Client {client_id} not found in session {session_id} during intro_completed.")
 
                 else:
                     last_non_ping_time = time.time()
@@ -158,3 +190,4 @@ def mount_websocket_routes(app):
             await disconnect_from_session(session_id, websocket)
 
     app.include_router(router)
+
