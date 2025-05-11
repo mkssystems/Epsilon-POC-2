@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from enum import Enum
 from db.session import get_db
+from uuid import UUID
 
 active_connections: Dict[str, List[Dict]] = {}
 
