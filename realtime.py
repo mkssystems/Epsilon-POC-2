@@ -4,7 +4,6 @@ from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
 from typing import Dict, List
 import asyncio
 import json
-from state import session_readiness, lock
 from schemas import PlayerStatus, SessionStatus
 from config import WEBSOCKET_INACTIVITY_TIMEOUT, WEBSOCKET_PING_ONLY_TIMEOUT
 import time
