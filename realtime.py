@@ -103,6 +103,9 @@ def mount_websocket_routes(app):
 
     @router.websocket("/ws/{session_id}/{client_id}")
     async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str, db: Session = Depends(get_db)):
+        # Explicit debug logging at the very start
+        print(f"[DEBUG] WebSocket connection attempt explicitly logged: session_id={session_id}, client_id={client_id}")
+    
         # Explicitly verify the client has joined the session before accepting WebSocket
         client_exists = db.query(MobileClient).filter(
             MobileClient.client_id == client_id,
@@ -110,9 +113,21 @@ def mount_websocket_routes(app):
         ).first()
     
         if not client_exists:
-            print(f"[WARN] WebSocket connection rejected explicitly: Client {client_id} not joined session {session_id}.")
+            # Explicitly fetch all connected clients to diagnose issue clearly
+            connected_clients = db.query(MobileClient).filter(
+                MobileClient.game_session_id == session_id
+            ).all()
+    
+            print(
+                f"[WARN] WebSocket connection explicitly rejected: Client {client_id} not joined session {session_id}. "
+                f"Existing clients explicitly retrieved from DB: "
+                f"{[(client.client_id, client.game_session_id) for client in connected_clients]}"
+            )
+    
             await websocket.close(code=1008)  # Policy Violation
             return
+        else:
+            print(f"[INFO] WebSocket connection explicitly accepted: Client {client_id} in session {session_id}")
     
         # Proceed explicitly only if the client is verified
         await connect_to_session(session_id, client_id, websocket, db)
@@ -124,9 +139,9 @@ def mount_websocket_routes(app):
                     message_text = await asyncio.wait_for(
                         websocket.receive_text(), timeout=WEBSOCKET_INACTIVITY_TIMEOUT
                     )
-                    print(f"[DEBUG] WebSocket message from client {client_id}: {message_text}")
+                    print(f"[DEBUG] WebSocket message explicitly received from client {client_id}: {message_text}")
                 except asyncio.TimeoutError:
-                    print(f"[INFO] WebSocket connection to client {client_id} closed due to inactivity.")
+                    print(f"[INFO] WebSocket connection explicitly closed due to inactivity: Client {client_id}")
                     await websocket.close()
                     await disconnect_from_session(session_id, websocket)
                     break
@@ -134,9 +149,9 @@ def mount_websocket_routes(app):
                 try:
                     data_dict = json.loads(message_text)
                     if not isinstance(data_dict, dict):
-                        raise ValueError(f"Parsed JSON is not an object: type={type(data_dict)}")
+                        raise ValueError(f"Explicit error: Parsed JSON is not an object: type={type(data_dict)}")
                 except (json.JSONDecodeError, ValueError) as e:
-                    print(f"[ERROR] JSON parse error from client {client_id}: {e}")
+                    print(f"[ERROR] JSON parse explicitly failed from client {client_id}: {e}")
                     await websocket.send_json({"type": "error", "message": "Invalid JSON format."})
                     continue
     
@@ -144,9 +159,9 @@ def mount_websocket_routes(app):
     
                 if message_type == 'ping':
                     await websocket.send_json({"type": "pong"})
-                    print(f"[INFO] Received 'ping' from client {client_id}")
+                    print(f"[INFO] 'ping' explicitly handled from client {client_id}")
                     if (time.time() - last_non_ping_time) > WEBSOCKET_PING_ONLY_TIMEOUT:
-                        print(f"[INFO] WebSocket closed (ping-only) for client {client_id}.")
+                        print(f"[INFO] WebSocket explicitly closed (ping-only) for client {client_id}")
                         await websocket.close()
                         await disconnect_from_session(session_id, websocket)
                         break
@@ -214,8 +229,8 @@ def mount_websocket_routes(app):
                     print(f"[WARN] Unknown action explicitly received from client {client_id}: {data_dict}")
     
         except WebSocketDisconnect:
-            print(f"[INFO] WebSocketDisconnect explicitly by client {client_id}")
+            print(f"[INFO] WebSocketDisconnect explicitly caught: Client {client_id}")
             await disconnect_from_session(session_id, websocket)
         except Exception as e:
-            print(f"[ERROR] Unexpected WebSocket error for client {client_id}: {e}")
+            print(f"[ERROR] Explicitly unexpected WebSocket error for client {client_id}: {e}")
             await disconnect_from_session(session_id, websocket)
