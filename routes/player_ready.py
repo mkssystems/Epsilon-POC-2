@@ -1,3 +1,4 @@
+#routes/player_ready.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from models.game_session import GameSession
