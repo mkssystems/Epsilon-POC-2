@@ -104,33 +104,29 @@ def mount_websocket_routes(app):
     @router.websocket("/ws/{session_id}/{client_id}")
     async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str, db: Session = Depends(get_db)):
         # Explicit debug logging at the very start
-        print(f"[DEBUG] WebSocket connection attempt explicitly logged: session_id={session_id}, client_id={client_id}")
+        print(f"[DEBUG] WebSocket attempt explicitly logged: session_id={session_id}, client_id={client_id}")
     
-        # Explicitly verify the client has joined the session before accepting WebSocket
-        client_exists = db.query(MobileClient).filter(
+        # Explicitly perform and log the detailed query result
+        client_query = db.query(MobileClient).filter(
             MobileClient.client_id == client_id,
             MobileClient.game_session_id == session_id
-        ).first()
+        )
     
-        if not client_exists:
-            # Explicitly fetch all connected clients to diagnose issue clearly
-            connected_clients = db.query(MobileClient).filter(
-                MobileClient.game_session_id == session_id
-            ).all()
+        client_exists = client_query.first()
     
-            print(
-                f"[WARN] WebSocket connection explicitly rejected: Client {client_id} not joined session {session_id}. "
-                f"Existing clients explicitly retrieved from DB: "
-                f"{[(client.client_id, client.game_session_id) for client in connected_clients]}"
-            )
-    
+        if client_exists:
+            print(f"[DEBUG] Explicit DB check PASSED: Client exists: {client_exists.client_id}, Session: {client_exists.game_session_id}")
+        else:
+            print(f"[ERROR] Explicit DB check FAILED: Client NOT found. Query executed explicitly.")
+            all_clients = db.query(MobileClient).filter(MobileClient.game_session_id == session_id).all()
+            print(f"[DEBUG] Clients explicitly retrieved for session {session_id}: {[(c.client_id, c.game_session_id) for c in all_clients]}")
             await websocket.close(code=1008)  # Policy Violation
             return
-        else:
-            print(f"[INFO] WebSocket connection explicitly accepted: Client {client_id} in session {session_id}")
     
         # Proceed explicitly only if the client is verified
         await connect_to_session(session_id, client_id, websocket, db)
+
+      
         last_non_ping_time = time.time()
     
         try:
