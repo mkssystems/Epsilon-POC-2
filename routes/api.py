@@ -7,9 +7,7 @@ from models.mobile_client import MobileClient
 from uuid import UUID, uuid4
 from datetime import datetime
 from schemas import ClientJoinRequest, GameSessionCreateRequest, PlayerStatus, SessionStatus
-
 from utils.corrected_labyrinth_backend_seed_fixed import generate_labyrinth, get_image_filename
-from state import session_readiness, lock
 from realtime import broadcast_session_update
 from realtime import broadcast_game_started
 from models import Entity, SessionPlayerCharacter
@@ -43,33 +41,40 @@ async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Se
     if not session:
         raise HTTPException(status_code=404, detail='Session not found')
 
-    existing_client = db.query(MobileClient).filter(MobileClient.client_id == request.client_id).first()
+    existing_client = db.query(MobileClient).filter(
+        MobileClient.client_id == request.client_id,
+        MobileClient.game_session_id == session_id
+    ).first()
+
     if existing_client:
         return {'message': 'Client already connected'}
 
+    # Explicitly create new client entry with readiness set to False by default
     new_client = MobileClient(
         client_id=request.client_id,
         game_session_id=session.id,
-        connected_at=datetime.utcnow()
+        connected_at=datetime.utcnow(),
+        is_ready=False
     )
+
     db.add(new_client)
     db.commit()
     db.refresh(new_client)
 
-    # Explicitly register client in readiness tracking upon joining
-    with lock:
-        session_str_id = str(session_id)
-        if session_str_id not in session_readiness:
-            session_readiness[session_str_id] = {}
+    # Explicitly retrieve readiness status of all connected clients from DB
+    all_clients = db.query(MobileClient).filter(MobileClient.game_session_id == session_id).all()
 
-        session_readiness[session_str_id][request.client_id] = False
+    players = [
+        PlayerStatus(client_id=client.client_id, ready=client.is_ready)
+        for client in all_clients
+    ]
 
-        players = [
-            PlayerStatus(client_id=cid, ready=ready)
-            for cid, ready in session_readiness[session_str_id].items()
-        ]
-        session_status = SessionStatus(players=players, all_ready=False)
-        await broadcast_session_update(session_str_id, session_status.dict())
+    all_ready = all(client.is_ready for client in all_clients)
+
+    session_status = SessionStatus(players=players, all_ready=all_ready)
+
+    # Explicitly broadcast current DB-driven readiness state
+    await broadcast_session_update(str(session_id), session_status.dict())
 
     return {
         'message': 'Connected successfully',
@@ -83,6 +88,7 @@ async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Se
         'max_players': session.max_players,
         'created_at': session.created_at.isoformat()
     }
+
 
 
 @router.get('/api/game_sessions/{session_id}/clients')
@@ -133,31 +139,41 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
 
 @router.post('/api/game_sessions/leave')
 async def leave_game_session(request: ClientJoinRequest, db: Session = Depends(get_db)):
-    existing_client = db.query(MobileClient).filter(MobileClient.client_id == request.client_id).first()
+    # Explicitly fetch client to be removed
+    existing_client = db.query(MobileClient).filter(
+        MobileClient.client_id == request.client_id
+    ).first()
+
     if not existing_client:
         raise HTTPException(status_code=404, detail='Client not connected to any session')
 
-    session_id = str(existing_client.game_session_id)
+    session_id = existing_client.game_session_id
 
-    # Explicitly remove player from DB
+    # Explicitly remove client from DB
     db.delete(existing_client)
     db.commit()
 
-    # Explicitly remove player from session readiness tracking and broadcast state
-    with lock:
-        if session_id in session_readiness and request.client_id in session_readiness[session_id]:
-            del session_readiness[session_id][request.client_id]
+    # Explicitly fetch remaining connected clients from DB
+    remaining_clients = db.query(MobileClient).filter(
+        MobileClient.game_session_id == session_id
+    ).all()
 
-        players = [
-            PlayerStatus(client_id=cid, ready=ready)
-            for cid, ready in session_readiness.get(session_id, {}).items()
-        ]
-        all_ready = all(player.ready for player in players) if players else False
+    # Construct readiness status explicitly from DB data
+    players = [
+        PlayerStatus(client_id=client.client_id, ready=client.is_ready)
+        for client in remaining_clients
+    ]
 
-        session_status = SessionStatus(players=players, all_ready=all_ready)
-        await broadcast_session_update(session_id, session_status.dict())
+    # Explicitly calculate overall readiness state
+    all_ready = all(player.ready for player in players) if players else False
+
+    session_status = SessionStatus(players=players, all_ready=all_ready)
+
+    # Broadcast explicitly constructed DB-based state via WebSocket
+    await broadcast_session_update(str(session_id), session_status.dict())
 
     return {'message': 'Disconnected successfully'}
+
 
 @router.get("/api/game_sessions/client_state/{client_id}")
 async def get_client_state(client_id: str, db: Session = Depends(get_db)):
@@ -183,53 +199,74 @@ async def get_client_state(client_id: str, db: Session = Depends(get_db)):
     return {"client_id": client_id, "connected_session": None, "session_details": None}
 
 @router.post("/api/game_sessions/{session_id}/toggle_readiness", response_model=SessionStatus)
-async def toggle_readiness(session_id: str, payload: PlayerStatus, db: Session = Depends(get_db)):
-    with lock:
-        if session_id not in session_readiness:
-            session_readiness[session_id] = {}
+async def toggle_readiness(session_id: UUID, payload: PlayerStatus, db: Session = Depends(get_db)):
+    # Explicitly verify client exists and is part of session
+    client = db.query(MobileClient).filter(
+        MobileClient.client_id == payload.client_id,
+        MobileClient.game_session_id == session_id
+    ).first()
 
-        # Explicitly fetch selection to confirm a character is selected before marking ready
-        selection = db.query(SessionPlayerCharacter).filter_by(
-            session_id=session_id, client_id=payload.client_id
-        ).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found in session.")
 
-        if not selection and payload.ready:
-            # Explicitly prevent players without a character selection from marking as ready
-            raise HTTPException(status_code=400, detail="Select a character before marking ready.")
+    # Explicitly verify character selection if setting ready
+    selection = db.query(SessionPlayerCharacter).filter_by(
+        session_id=session_id, client_id=payload.client_id
+    ).first()
 
-        if selection:
-            # Explicitly lock/unlock character selection based on readiness
-            selection.locked = payload.ready
-            db.commit()
+    if payload.ready and not selection:
+        raise HTTPException(status_code=400, detail="Character must be selected before ready.")
 
-        session_readiness[session_id][payload.client_id] = payload.ready
+    # Update readiness explicitly in DB
+    client.is_ready = payload.ready
 
-        players = [
-            PlayerStatus(client_id=cid, ready=ready)
-            for cid, ready in session_readiness[session_id].items()
-        ]
+    # Explicitly update character lock state if selection exists
+    if selection:
+        selection.locked = payload.ready
 
-        all_ready = all(p.ready for p in players)
-        session_status = SessionStatus(players=players, all_ready=all_ready)
+    db.commit()
 
-        await broadcast_session_update(session_id, session_status.dict())
+    # Fetch updated readiness explicitly from DB
+    all_clients = db.query(MobileClient).filter(
+        MobileClient.game_session_id == session_id
+    ).all()
 
-        return session_status
+    players = [
+        PlayerStatus(client_id=client.client_id, ready=client.is_ready)
+        for client in all_clients
+    ]
+
+    all_ready = all(client.is_ready for client in all_clients)
+
+    session_status = SessionStatus(players=players, all_ready=all_ready)
+
+    # Explicitly broadcast DB-driven readiness via WebSocket
+    await broadcast_session_update(str(session_id), session_status.dict())
+
+    return session_status
 
 
 
 
 @router.get("/api/game_sessions/{session_id}/status", response_model=SessionStatus)
-async def get_session_status(session_id: str):
-    with lock:
-        players = []
-        if session_id in session_readiness:
-            players = [
-                PlayerStatus(client_id=cid, ready=ready)
-                for cid, ready in session_readiness[session_id].items()
-            ]
-        all_ready = all(p.ready for p in players) if players else False
-        return SessionStatus(players=players, all_ready=all_ready)
+async def get_session_status(session_id: UUID, db: Session = Depends(get_db)):
+    # Explicitly fetch all connected clients and their readiness status from the database
+    clients = db.query(MobileClient).filter(
+        MobileClient.game_session_id == session_id
+    ).all()
+
+    # Construct player statuses directly from DB entries
+    players = [
+        PlayerStatus(client_id=client.client_id, ready=client.is_ready)
+        for client in clients
+    ]
+
+    # Explicitly calculate if all connected players are ready
+    all_ready = all(player.ready for player in players) if players else False
+
+    # Explicitly return session status constructed purely from DB state
+    return SessionStatus(players=players, all_ready=all_ready)
+
 
 @router.delete('/api/game_sessions/destroy_all')
 async def destroy_all_sessions(db: Session = Depends(get_db)):
