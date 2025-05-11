@@ -25,10 +25,33 @@ import json  # explicitly import json
 router = APIRouter()
 
 @router.post("/api/game_sessions/{session_id}/start_game")
-async def start_game(session_id: str):
+async def start_game(session_id: str, db: Session = Depends(get_db)):
     controller = GameFlowController(session_id)
     controller.start_game()  # Explicitly handles initialization and broadcasting internally
+
+    # Explicitly reset all players readiness after starting the game
+    db.query(MobileClient).filter(
+        MobileClient.game_session_id == session_id
+    ).update({"is_ready": False})
+
+    db.commit()
+
+    # Explicitly broadcast new readiness status
+    all_clients = db.query(MobileClient).filter(
+        MobileClient.game_session_id == session_id
+    ).all()
+
+    players = [
+        PlayerStatus(client_id=client.client_id, ready=client.is_ready)
+        for client in all_clients
+    ]
+
+    session_status = SessionStatus(players=players, all_ready=False)
+
+    await broadcast_session_update(session_id, session_status.dict())
+
     return {"message": "Game started successfully"}
+
 
 @router.get('/api/game_sessions')
 async def get_game_sessions(db: Session = Depends(get_db)):
