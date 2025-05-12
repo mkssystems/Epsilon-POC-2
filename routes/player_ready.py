@@ -11,7 +11,7 @@ from datetime import datetime
 
 router = APIRouter()
 
-@router.post("/api/game/{session_id}/player-ready")
+@router.post("/game/{session_id}/player-ready")
 async def player_ready(session_id: str, payload: dict, db: Session = Depends(get_db)):
     client_id = payload.get("client_id")
 
