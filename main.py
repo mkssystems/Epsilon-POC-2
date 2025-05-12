@@ -59,45 +59,47 @@ SessionLocal = sessionmaker(bind=engine)
 FORCE_REINIT_DB = True
 
 @app.on_event("startup")
-def startup():
-    def init_db():
-        if FORCE_REINIT_DB:
-            print("⚠️ Reinitializing the database from scratch...")
+async def startup_event():
+    if FORCE_REINIT_DB:
+        print("⚠️ Reinitializing the database from scratch...")
 
-            # Open explicit transaction
-            with engine.begin() as connection:
-                # Drop and recreate tables explicitly
-                EntityBase.metadata.drop_all(bind=connection)
-                print("✅ Tables dropped successfully.")
-                
-                EntityBase.metadata.create_all(bind=connection)
-                print("✅ Tables created successfully.")
+        # Using synchronous DB calls inside an executor
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, init_db_sync)
 
-                # Explicitly cache CSV data globally to avoid repeated file reads
-                global cached_data
-                try:
-                    cached_data
-                except NameError:
-                    cached_data = {
-                        "entities": pd.read_csv("assets/seed/entities.csv"),
-                        "equipment": pd.read_csv("assets/seed/equipment.csv"),
-                        "skills": pd.read_csv("assets/seed/skills.csv"),
-                        "specials": pd.read_csv("assets/seed/specials.csv"),
-                        "map_objects": pd.read_csv("assets/seed/map_objects.csv"),
-                    }
+        print("🚀 Database initialization complete and successful.")
 
-                # Explicitly call your existing load_data function
-                load_data(connection, 
-                          cached_data["entities"], 
-                          cached_data["equipment"], 
-                          cached_data["skills"], 
-                          cached_data["specials"], 
-                          cached_data["map_objects"])
-                print("✅ Seed data loaded successfully.")
+def init_db_sync():
+    with engine.begin() as connection:
+        # Drop and recreate tables explicitly
+        EntityBase.metadata.drop_all(bind=connection)
+        print("✅ Tables dropped successfully.")
+        
+        EntityBase.metadata.create_all(bind=connection)
+        print("✅ Tables created successfully.")
 
-            print("🚀 Database initialization complete and successful.")
+        # Cache CSV data globally
+        global cached_data
+        try:
+            cached_data
+        except NameError:
+            cached_data = {
+                "entities": pd.read_csv("assets/seed/entities.csv"),
+                "equipment": pd.read_csv("assets/seed/equipment.csv"),
+                "skills": pd.read_csv("assets/seed/skills.csv"),
+                "specials": pd.read_csv("assets/seed/specials.csv"),
+                "map_objects": pd.read_csv("assets/seed/map_objects.csv"),
+            }
 
-    threading.Thread(target=init_db).start()
+        # Load data explicitly
+        load_data(connection, 
+                  cached_data["entities"], 
+                  cached_data["equipment"], 
+                  cached_data["skills"], 
+                  cached_data["specials"], 
+                  cached_data["map_objects"])
+        print("✅ Seed data loaded successfully.")
+
 
 
 
