@@ -40,6 +40,8 @@ from routes.player_ready import router as player_ready_router
 # Import for real-time socket
 from realtime import mount_websocket_routes, broadcast_session_update
 
+from starlette.types import ASGIApp, Receive, Scope, Send
+
 app = FastAPI()
 
 allowed_origins = [
@@ -110,6 +112,18 @@ def init_db_sync():
 class GameSessionCreateRequest(BaseModel):
     size: int
     seed: Optional[str] = None
+
+class WebSocketStaticFilesBypassMiddleware:
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] == "websocket" and scope["path"].startswith("/ws"):
+            # Explicitly reject static handling for websocket routes
+            await app(scope, receive, send)
+        else:
+            # Forward everything else normally
+            await self.app(scope, receive, send)
 
 class GameSessionResponse(BaseModel):
     id: UUID
@@ -228,6 +242,9 @@ mount_websocket_routes(app)
 # Include API router SECOND
 app.include_router(api_router)
 app.include_router(player_ready_router)
+
+# Insert middleware to bypass StaticFiles explicitly for WebSockets
+app.add_middleware(WebSocketStaticFilesBypassMiddleware)
 
 # Mount static files LAST
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
