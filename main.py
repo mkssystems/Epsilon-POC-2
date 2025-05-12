@@ -56,7 +56,7 @@ app.add_middleware(
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
-FORCE_REINIT_DB = True
+FORCE_REINIT_DB = False
 
 @app.on_event("startup")
 def startup():
