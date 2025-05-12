@@ -30,6 +30,7 @@ from models.specials import Special
 from state import session_readiness, lock
 
 from config import DATABASE_URL
+from fastapi.middleware.cors import CORSMiddleware
 
 # Import API routers
 from routes.api import router as api_router
@@ -39,6 +40,18 @@ from routes.player_ready import router as player_ready_router
 from realtime import mount_websocket_routes, broadcast_session_update
 
 app = FastAPI()
+
+allowed_origins = [
+    "*",  # temporary debugging only; remove for production
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
