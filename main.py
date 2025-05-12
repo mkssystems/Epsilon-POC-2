@@ -13,7 +13,6 @@ from uuid import UUID
 import json
 import threading
 import pandas as pd
-import asyncio
 
 from models.base import Base
 from models.game_session import GameSession
@@ -40,8 +39,6 @@ from routes.player_ready import router as player_ready_router
 # Import for real-time socket
 from realtime import mount_websocket_routes, broadcast_session_update
 
-from starlette.types import ASGIApp, Receive, Scope, Send
-
 app = FastAPI()
 
 allowed_origins = [
@@ -62,47 +59,45 @@ SessionLocal = sessionmaker(bind=engine)
 FORCE_REINIT_DB = True
 
 @app.on_event("startup")
-async def startup_event():
-    if FORCE_REINIT_DB:
-        print("⚠️ Reinitializing the database from scratch...")
+def startup():
+    def init_db():
+        if FORCE_REINIT_DB:
+            print("⚠️ Reinitializing the database from scratch...")
 
-        # Using synchronous DB calls inside an executor
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, init_db_sync)
+            # Open explicit transaction
+            with engine.begin() as connection:
+                # Drop and recreate tables explicitly
+                EntityBase.metadata.drop_all(bind=connection)
+                print("✅ Tables dropped successfully.")
+                
+                EntityBase.metadata.create_all(bind=connection)
+                print("✅ Tables created successfully.")
 
-        print("🚀 Database initialization complete and successful.")
+                # Explicitly cache CSV data globally to avoid repeated file reads
+                global cached_data
+                try:
+                    cached_data
+                except NameError:
+                    cached_data = {
+                        "entities": pd.read_csv("assets/seed/entities.csv"),
+                        "equipment": pd.read_csv("assets/seed/equipment.csv"),
+                        "skills": pd.read_csv("assets/seed/skills.csv"),
+                        "specials": pd.read_csv("assets/seed/specials.csv"),
+                        "map_objects": pd.read_csv("assets/seed/map_objects.csv"),
+                    }
 
-def init_db_sync():
-    with engine.begin() as connection:
-        # Drop and recreate tables explicitly
-        EntityBase.metadata.drop_all(bind=connection)
-        print("✅ Tables dropped successfully.")
-        
-        EntityBase.metadata.create_all(bind=connection)
-        print("✅ Tables created successfully.")
+                # Explicitly call your existing load_data function
+                load_data(connection, 
+                          cached_data["entities"], 
+                          cached_data["equipment"], 
+                          cached_data["skills"], 
+                          cached_data["specials"], 
+                          cached_data["map_objects"])
+                print("✅ Seed data loaded successfully.")
 
-        # Cache CSV data globally
-        global cached_data
-        try:
-            cached_data
-        except NameError:
-            cached_data = {
-                "entities": pd.read_csv("assets/seed/entities.csv"),
-                "equipment": pd.read_csv("assets/seed/equipment.csv"),
-                "skills": pd.read_csv("assets/seed/skills.csv"),
-                "specials": pd.read_csv("assets/seed/specials.csv"),
-                "map_objects": pd.read_csv("assets/seed/map_objects.csv"),
-            }
+            print("🚀 Database initialization complete and successful.")
 
-        # Load data explicitly
-        load_data(connection, 
-                  cached_data["entities"], 
-                  cached_data["equipment"], 
-                  cached_data["skills"], 
-                  cached_data["specials"], 
-                  cached_data["map_objects"])
-        print("✅ Seed data loaded successfully.")
-
+    threading.Thread(target=init_db).start()
 
 
 
@@ -112,18 +107,6 @@ def init_db_sync():
 class GameSessionCreateRequest(BaseModel):
     size: int
     seed: Optional[str] = None
-
-class WebSocketStaticFilesBypassMiddleware:
-    def __init__(self, app: ASGIApp):
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send):
-        if scope["type"] == "websocket" and scope["path"].startswith("/ws"):
-            # Explicitly reject static handling for websocket routes
-            await app(scope, receive, send)
-        else:
-            # Forward everything else normally
-            await self.app(scope, receive, send)
 
 class GameSessionResponse(BaseModel):
     id: UUID
@@ -243,9 +226,6 @@ mount_websocket_routes(app)
 app.include_router(api_router)
 app.include_router(player_ready_router)
 
-# Insert middleware to bypass StaticFiles explicitly for WebSockets
-app.add_middleware(WebSocketStaticFilesBypassMiddleware)
-
 # Mount static files LAST
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+app.mount("/console", StaticFiles(directory="frontend", html=True), name="frontend")
 app.mount("/tiles", StaticFiles(directory="frontend/tiles"), name="tiles")
