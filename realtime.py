@@ -106,31 +106,12 @@ def mount_websocket_routes(app):
     async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str, db: Session = Depends(get_db)):
         # Explicit debug logging at the very start
         print(f"[DEBUG] WebSocket attempt explicitly logged: session_id={session_id}, client_id={client_id}")
-    
-        # Explicitly perform and log the detailed query result
-        client_query = db.query(MobileClient).filter(
-            MobileClient.client_id == client_id,
-            MobileClient.game_session_id == session_id
-        )
-        print(f"[DEBUG] session_id='{session_id.strip()}', client_id='{client_id.strip()}'")
 
-        client_exists = client_query.first()
-    
-        if client_exists:
-            print(f"[DEBUG] Explicit DB check PASSED: Client exists: {client_exists.client_id}, Session: {client_exists.game_session_id}")
-        else:
-            print(f"[ERROR] Explicit DB check FAILED: Client NOT found. Query executed explicitly.")
-            all_clients = db.query(MobileClient).filter(MobileClient.game_session_id == session_id).all()
-            print(f"[DEBUG] Clients explicitly retrieved for session {session_id}: {[(c.client_id, c.game_session_id) for c in all_clients]}")
-            await websocket.close(code=1008)  # Policy Violation
-            return
-    
-        # Proceed explicitly only if the client is verified
+        # Proceed explicitly without checking client existence
         await connect_to_session(session_id, client_id, websocket, db)
 
-      
         last_non_ping_time = time.time()
-    
+
         try:
             while True:
                 try:
@@ -143,7 +124,7 @@ def mount_websocket_routes(app):
                     await websocket.close()
                     await disconnect_from_session(session_id, websocket)
                     break
-    
+
                 try:
                     data_dict = json.loads(message_text)
                     if not isinstance(data_dict, dict):
@@ -152,9 +133,9 @@ def mount_websocket_routes(app):
                     print(f"[ERROR] JSON parse explicitly failed from client {client_id}: {e}")
                     await websocket.send_json({"type": "error", "message": "Invalid JSON format."})
                     continue
-    
+
                 message_type = data_dict.get('type')
-    
+
                 if message_type == 'ping':
                     await websocket.send_json({"type": "pong"})
                     print(f"[INFO] 'ping' explicitly handled from client {client_id}")
@@ -163,69 +144,69 @@ def mount_websocket_routes(app):
                         await websocket.close()
                         await disconnect_from_session(session_id, websocket)
                         break
-    
+
                 elif message_type == 'intro_completed':
                     client_entry = db.query(MobileClient).filter(
                         MobileClient.client_id == client_id,
                         MobileClient.game_session_id == session_id
                     ).first()
-    
+
                     if client_entry:
                         client_entry.is_ready = True
                         db.commit()
-    
+
                         all_clients = db.query(MobileClient).filter(
                             MobileClient.game_session_id == session_id
                         ).all()
-    
+
                         players = [
                             PlayerStatus(client_id=client.client_id, ready=client.is_ready)
                             for client in all_clients
                         ]
-    
+
                         all_ready = all(client.is_ready for client in all_clients)
-    
+
                         session_status = SessionStatus(players=players, all_ready=all_ready)
-    
+
                         await broadcast_session_update(session_id, session_status.dict())
-    
+
                         if all_ready:
                             await broadcast_session_update(session_id, {
                                 "event": "all_players_ready",
                                 "message": "All players have completed the intro."
                             })
-    
+
                         print(f"[INFO] Player {client_id} marked explicitly as ready.")
                     else:
                         await websocket.send_json({"type": "error", "message": "Client not found in session."})
                         print(f"[WARN] Client {client_id} explicitly not found in session {session_id}.")
-    
+
                 elif message_type == 'request_readiness':
                     all_clients = db.query(MobileClient).filter(
                         MobileClient.game_session_id == session_id
                     ).all()
-    
+
                     players = [
                         PlayerStatus(client_id=client.client_id, ready=client.is_ready)
                         for client in all_clients
                     ]
-    
+
                     all_ready = all(client.is_ready for client in all_clients)
-    
+
                     response = {
                         "type": "readiness_status",
                         "players": [player.dict() for player in players],
                         "all_ready": all_ready
                     }
-    
+
                     await websocket.send_json(response)
                     print(f"[INFO] Explicit readiness status sent to client {client_id}.")
-    
+
                 else:
                     last_non_ping_time = time.time()
                     await websocket.send_json({"type": "error", "message": f"Unknown action '{message_type}' provided."})
                     print(f"[WARN] Unknown action explicitly received from client {client_id}: {data_dict}")
-    
+
         except WebSocketDisconnect:
             print(f"[INFO] WebSocketDisconnect explicitly caught: Client {client_id}")
             await disconnect_from_session(session_id, websocket)
