@@ -112,7 +112,8 @@ def mount_websocket_routes(app):
             MobileClient.client_id == client_id,
             MobileClient.game_session_id == session_id
         )
-    
+        print(f"[DEBUG] session_id='{session_id.strip()}', client_id='{client_id.strip()}'")
+
         client_exists = client_query.first()
     
         if client_exists:
