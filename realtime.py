@@ -1,52 +1,62 @@
-# realtime.py
+# realtime.py (explicitly balanced DB & WebSocket stability)
 
-from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
+from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from typing import Dict, List
 import asyncio
 import json
+import threading
 from schemas import PlayerStatus, SessionStatus
 from config import WEBSOCKET_INACTIVITY_TIMEOUT, WEBSOCKET_PING_ONLY_TIMEOUT
 import time
 from datetime import datetime
 from enum import Enum
-from db.session import get_db
-from uuid import UUID
+
+from db.session import SessionLocal  # Explicit DB session
+from models.mobile_client import MobileClient
 
 active_connections: Dict[str, List[Dict]] = {}
+session_readiness: Dict[str, Dict[str, bool]] = {}  # Explicit in-memory cache
+lock = threading.Lock()  # Explicit thread-safe operations
 
-from sqlalchemy.orm import Session
-from models.mobile_client import MobileClient
-from schemas import PlayerStatus, SessionStatus
-from db.session import get_db  # Explicit DB session handler
+# Custom serializer to handle special data types (datetime, enum)
+def custom_serializer(o):
+    if isinstance(o, datetime):
+        return o.isoformat()
+    if isinstance(o, Enum):
+        return o.value
+    raise TypeError(f"Type {type(o)} not serializable")
 
-async def connect_to_session(session_id: str, client_id: str, websocket: WebSocket, db: Session):
-    # Accept WebSocket connection explicitly
+async def broadcast_session_update(session_id: str, message: dict):
+    serialized_message = json.loads(json.dumps(message, default=custom_serializer))
+    if session_id in active_connections:
+        for connection in active_connections[session_id]:
+            try:
+                await connection["websocket"].send_json(serialized_message)
+            except Exception as e:
+                print(f"[ERROR] WebSocket send_json exception: {e}")
+
+async def connect_to_session(session_id: str, client_id: str, websocket: WebSocket):
     await websocket.accept()
-
-    # Register the WebSocket connection explicitly
     if session_id not in active_connections:
         active_connections[session_id] = []
     active_connections[session_id].append({"client_id": client_id, "websocket": websocket})
 
-    # Explicitly fetch readiness status directly from DB
-    all_clients = db.query(MobileClient).filter(
-        MobileClient.game_session_id == session_id
-    ).all()
+    # Explicitly initialize DB session once per connection
+    db = SessionLocal()
+    try:
+        # Fetch readiness explicitly from DB at connection start
+        clients = db.query(MobileClient).filter(MobileClient.game_session_id == session_id).all()
 
-    # Construct players readiness from DB entries explicitly
-    players = [
-        PlayerStatus(client_id=client.client_id, ready=client.is_ready)
-        for client in all_clients
-    ]
+        with lock:
+            session_readiness[session_id] = {client.client_id: client.is_ready for client in clients}
 
-    # Explicitly calculate overall readiness state
-    all_ready = all(client.is_ready for client in all_clients)
+        players = [PlayerStatus(client_id=c.client_id, ready=c.is_ready) for c in clients]
+        all_ready = all(c.is_ready for c in clients)
 
-    session_status = SessionStatus(players=players, all_ready=all_ready)
-
-    # Explicitly broadcast readiness state retrieved from DB
-    await broadcast_session_update(session_id, session_status.dict())
-
+        session_status = SessionStatus(players=players, all_ready=all_ready)
+        await broadcast_session_update(session_id, session_status.dict())
+    finally:
+        db.close()
 
 async def disconnect_from_session(session_id: str, websocket: WebSocket):
     if session_id in active_connections:
@@ -57,59 +67,29 @@ async def disconnect_from_session(session_id: str, websocket: WebSocket):
         if not active_connections[session_id]:
             del active_connections[session_id]
 
-# Serializer to handle special data types (datetime, enum)
-def custom_serializer(o):
-    if isinstance(o, datetime):
-        return o.isoformat()
-    if isinstance(o, Enum):
-        return o.value
-    raise TypeError(f"Type {type(o)} not serializable")
-
-async def broadcast_session_update(session_id: str, message: dict):
-    if not isinstance(message, dict):
-        print(f"[ERROR] Invalid message: {message}")
-        return
-
-    serialized_message = json.loads(json.dumps(message, default=custom_serializer))
-
-    if session_id in active_connections:
-        for connection in active_connections[session_id]:
-            try:
-                await connection["websocket"].send_json(serialized_message)
-            except Exception as e:
-                print(f"[ERROR] WebSocket send_json exception: {e}")
-
 async def broadcast_game_started(session_id: str):
-    message = {"event": "game_started"}
-    await broadcast_session_update(session_id, message)
+    await broadcast_session_update(session_id, {"event": "game_started"})
 
 async def broadcast_character_selected(session_id: str, client_id: str, entity_id: str):
-    message = {
+    await broadcast_session_update(session_id, {
         "event": "character_selected",
         "client_id": client_id,
         "entity_id": entity_id
-    }
-    await broadcast_session_update(session_id, message)
+    })
 
 async def broadcast_character_released(session_id: str, client_id: str, entity_id: str):
-    message = {
+    await broadcast_session_update(session_id, {
         "event": "character_released",
         "client_id": client_id,
         "entity_id": entity_id
-    }
-    await broadcast_session_update(session_id, message)
+    })
 
 def mount_websocket_routes(app):
     router = APIRouter()
 
     @router.websocket("/ws/{session_id}/{client_id}")
-    async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str, db: Session = Depends(get_db)):
-        # Explicit debug logging at the very start
-        print(f"[DEBUG] WebSocket attempt explicitly logged: session_id={session_id}, client_id={client_id}")
-
-        # Proceed explicitly without checking client existence
-        await connect_to_session(session_id, client_id, websocket, db)
-
+    async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str):
+        await connect_to_session(session_id, client_id, websocket)
         last_non_ping_time = time.time()
 
         try:
@@ -118,9 +98,9 @@ def mount_websocket_routes(app):
                     message_text = await asyncio.wait_for(
                         websocket.receive_text(), timeout=WEBSOCKET_INACTIVITY_TIMEOUT
                     )
-                    print(f"[DEBUG] WebSocket message explicitly received from client {client_id}: {message_text}")
+                    print(f"[DEBUG] WebSocket message from {client_id}: {message_text}")
                 except asyncio.TimeoutError:
-                    print(f"[INFO] WebSocket connection explicitly closed due to inactivity: Client {client_id}")
+                    print(f"[INFO] Client {client_id} disconnected due to inactivity.")
                     await websocket.close()
                     await disconnect_from_session(session_id, websocket)
                     break
@@ -128,9 +108,8 @@ def mount_websocket_routes(app):
                 try:
                     data_dict = json.loads(message_text)
                     if not isinstance(data_dict, dict):
-                        raise ValueError(f"Explicit error: Parsed JSON is not an object: type={type(data_dict)}")
-                except (json.JSONDecodeError, ValueError) as e:
-                    print(f"[ERROR] JSON parse explicitly failed from client {client_id}: {e}")
+                        raise ValueError("Parsed JSON is not an object.")
+                except (json.JSONDecodeError, ValueError):
                     await websocket.send_json({"type": "error", "message": "Invalid JSON format."})
                     continue
 
@@ -138,78 +117,67 @@ def mount_websocket_routes(app):
 
                 if message_type == 'ping':
                     await websocket.send_json({"type": "pong"})
-                    print(f"[INFO] 'ping' explicitly handled from client {client_id}")
                     if (time.time() - last_non_ping_time) > WEBSOCKET_PING_ONLY_TIMEOUT:
-                        print(f"[INFO] WebSocket explicitly closed (ping-only) for client {client_id}")
+                        print(f"[INFO] Client {client_id} ping-only timeout.")
                         await websocket.close()
                         await disconnect_from_session(session_id, websocket)
                         break
 
                 elif message_type == 'intro_completed':
-                    client_entry = db.query(MobileClient).filter(
-                        MobileClient.client_id == client_id,
-                        MobileClient.game_session_id == session_id
-                    ).first()
-
-                    if client_entry:
-                        client_entry.is_ready = True
-                        db.commit()
-
-                        all_clients = db.query(MobileClient).filter(
+                    db = SessionLocal()
+                    try:
+                        client_entry = db.query(MobileClient).filter(
+                            MobileClient.client_id == client_id,
                             MobileClient.game_session_id == session_id
-                        ).all()
+                        ).first()
+                        if client_entry:
+                            client_entry.is_ready = True
+                            db.commit()
 
-                        players = [
-                            PlayerStatus(client_id=client.client_id, ready=client.is_ready)
-                            for client in all_clients
-                        ]
+                            # Update readiness explicitly in memory
+                            with lock:
+                                session_readiness[session_id][client_id] = True
 
-                        all_ready = all(client.is_ready for client in all_clients)
+                            players = [
+                                PlayerStatus(client_id=cid, ready=ready)
+                                for cid, ready in session_readiness[session_id].items()
+                            ]
+                            all_ready = all(player.ready for player in players)
 
-                        session_status = SessionStatus(players=players, all_ready=all_ready)
+                            await broadcast_session_update(session_id, SessionStatus(players=players, all_ready=all_ready).dict())
 
-                        await broadcast_session_update(session_id, session_status.dict())
-
-                        if all_ready:
-                            await broadcast_session_update(session_id, {
-                                "event": "all_players_ready",
-                                "message": "All players have completed the intro."
-                            })
-
-                        print(f"[INFO] Player {client_id} marked explicitly as ready.")
-                    else:
-                        await websocket.send_json({"type": "error", "message": "Client not found in session."})
-                        print(f"[WARN] Client {client_id} explicitly not found in session {session_id}.")
+                            if all_ready:
+                                await broadcast_session_update(session_id, {
+                                    "event": "all_players_ready",
+                                    "message": "All players have completed the intro."
+                                })
+                        else:
+                            await websocket.send_json({"type": "error", "message": "Client not found."})
+                    finally:
+                        db.close()
 
                 elif message_type == 'request_readiness':
-                    all_clients = db.query(MobileClient).filter(
-                        MobileClient.game_session_id == session_id
-                    ).all()
+                    # Explicitly use cached readiness (fast)
+                    with lock:
+                        players = [
+                            PlayerStatus(client_id=cid, ready=ready)
+                            for cid, ready in session_readiness.get(session_id, {}).items()
+                        ]
+                        all_ready = all(player.ready for player in players)
 
-                    players = [
-                        PlayerStatus(client_id=client.client_id, ready=client.is_ready)
-                        for client in all_clients
-                    ]
-
-                    all_ready = all(client.is_ready for client in all_clients)
-
-                    response = {
+                    await websocket.send_json({
                         "type": "readiness_status",
-                        "players": [player.dict() for player in players],
+                        "players": [p.dict() for p in players],
                         "all_ready": all_ready
-                    }
-
-                    await websocket.send_json(response)
-                    print(f"[INFO] Explicit readiness status sent to client {client_id}.")
+                    })
 
                 else:
-                    last_non_ping_time = time.time()
-                    await websocket.send_json({"type": "error", "message": f"Unknown action '{message_type}' provided."})
-                    print(f"[WARN] Unknown action explicitly received from client {client_id}: {data_dict}")
+                    await websocket.send_json({"type": "error", "message": f"Unknown action '{message_type}'."})
 
         except WebSocketDisconnect:
-            print(f"[INFO] WebSocketDisconnect explicitly caught: Client {client_id}")
             await disconnect_from_session(session_id, websocket)
         except Exception as e:
-            print(f"[ERROR] Explicitly unexpected WebSocket error for client {client_id}: {e}")
+            print(f"[ERROR] WebSocket error: {e}")
             await disconnect_from_session(session_id, websocket)
+
+    app.include_router(router)
