@@ -24,7 +24,7 @@ import json  # explicitly import json
 
 router = APIRouter()
 
-@router.post("/api/game_sessions/{session_id}/start_game")
+@router.post("/game_sessions/{session_id}/start_game")
 async def start_game(session_id: str, db: Session = Depends(get_db)):
     controller = GameFlowController(session_id)
     controller.start_game()  # Explicitly handles initialization and broadcasting internally
@@ -53,12 +53,12 @@ async def start_game(session_id: str, db: Session = Depends(get_db)):
     return {"message": "Game started successfully"}
 
 
-@router.get('/api/game_sessions')
+@router.get('/game_sessions')
 async def get_game_sessions(db: Session = Depends(get_db)):
     sessions = db.query(GameSession).all()
     return {"sessions": sessions}
 
-@router.post('/api/game_sessions/{session_id}/join')
+@router.post('/game_sessions/{session_id}/join')
 async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Session = Depends(get_db)):
     session = db.query(GameSession).filter(GameSession.id == session_id).first()
     if not session:
@@ -118,7 +118,7 @@ async def join_game_session(session_id: UUID, request: ClientJoinRequest, db: Se
 
 
 
-@router.get('/api/game_sessions/{session_id}/clients')
+@router.get('/game_sessions/{session_id}/clients')
 async def get_connected_clients(session_id: UUID, db: Session = Depends(get_db)):
     session = db.query(GameSession).filter(GameSession.id == session_id).first()
     if not session:
@@ -133,7 +133,7 @@ async def get_connected_clients(session_id: UUID, db: Session = Depends(get_db))
         ]
     }
 
-@router.post('/api/game_sessions/create')
+@router.post('/game_sessions/create')
 async def create_game_session(request: GameSessionCreateRequest, db: Session = Depends(get_db)):
     labyrinth, _ = generate_labyrinth(request.size, None, db)
 
@@ -164,7 +164,7 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
         'max_players': new_session.max_players
     }
 
-@router.post('/api/game_sessions/leave')
+@router.post('/game_sessions/leave')
 async def leave_game_session(request: ClientJoinRequest, db: Session = Depends(get_db)):
     # Explicitly fetch client to be removed
     existing_client = db.query(MobileClient).filter(
@@ -202,7 +202,7 @@ async def leave_game_session(request: ClientJoinRequest, db: Session = Depends(g
     return {'message': 'Disconnected successfully'}
 
 
-@router.get("/api/game_sessions/client_state/{client_id}")
+@router.get("/game_sessions/client_state/{client_id}")
 async def get_client_state(client_id: str, db: Session = Depends(get_db)):
     client = db.query(MobileClient).filter(MobileClient.client_id == client_id).first()
     if client and client.game_session_id:
@@ -225,7 +225,7 @@ async def get_client_state(client_id: str, db: Session = Depends(get_db)):
             }
     return {"client_id": client_id, "connected_session": None, "session_details": None}
 
-@router.post("/api/game_sessions/{session_id}/toggle_readiness", response_model=SessionStatus)
+@router.post("/game_sessions/{session_id}/toggle_readiness", response_model=SessionStatus)
 async def toggle_readiness(session_id: UUID, payload: PlayerStatus, db: Session = Depends(get_db)):
     # Explicitly verify client exists and is part of session
     client = db.query(MobileClient).filter(
@@ -275,7 +275,7 @@ async def toggle_readiness(session_id: UUID, payload: PlayerStatus, db: Session 
 
 
 
-@router.get("/api/game_sessions/{session_id}/status", response_model=SessionStatus)
+@router.get("/game_sessions/{session_id}/status", response_model=SessionStatus)
 async def get_session_status(session_id: UUID, db: Session = Depends(get_db)):
     # Explicitly fetch all connected clients and their readiness status from the database
     clients = db.query(MobileClient).filter(
@@ -295,7 +295,7 @@ async def get_session_status(session_id: UUID, db: Session = Depends(get_db)):
     return SessionStatus(players=players, all_ready=all_ready)
 
 
-@router.delete('/api/game_sessions/destroy_all')
+@router.delete('/game_sessions/destroy_all')
 async def destroy_all_sessions(db: Session = Depends(get_db)):
     try:
         db.query(MobileClient).delete()  # Delete connected mobile clients first to avoid foreign key constraints
@@ -306,12 +306,12 @@ async def destroy_all_sessions(db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get('/api/game_sessions/user/{client_id}')
+@router.get('/game_sessions/user/{client_id}')
 async def get_user_game_sessions(client_id: str, db: Session = Depends(get_db)):
     sessions = db.query(GameSession).filter(GameSession.creator_client_id == client_id).all()
     return {"sessions": sessions}
 
-@router.get('/api/game_sessions/user/{client_id}/joined')
+@router.get('/game_sessions/user/{client_id}/joined')
 async def get_joined_game_sessions(client_id: str, db: Session = Depends(get_db)):
     sessions = db.query(GameSession).join(MobileClient).filter(
         MobileClient.client_id == client_id,
@@ -321,7 +321,7 @@ async def get_joined_game_sessions(client_id: str, db: Session = Depends(get_db)
     return {"sessions": sessions}
 
 # Explicitly fetch characters that are not yet selected by any player (locked OR unlocked)
-@router.get("/api/game_sessions/{session_id}/available_characters")
+@router.get("/game_sessions/{session_id}/available_characters")
 async def available_characters(session_id: UUID, db: Session = Depends(get_db)):
     # Fetch the game session explicitly
     session = db.query(GameSession).filter(GameSession.id == session_id).first()
@@ -347,7 +347,7 @@ async def available_characters(session_id: UUID, db: Session = Depends(get_db)):
 
 
 # Endpoint for a player to select a character in a specific session
-@router.post("/api/game_sessions/{session_id}/select_character")
+@router.post("/game_sessions/{session_id}/select_character")
 async def select_character(session_id: UUID, client_id: str, entity_id: str, db: Session = Depends(get_db)):
     # Check if the desired character is already selected by another player (locked or unlocked)
     existing_selection_by_others = db.query(SessionPlayerCharacter).filter(
@@ -395,7 +395,7 @@ async def select_character(session_id: UUID, client_id: str, entity_id: str, db:
     return {"message": "Character selected successfully."}
 
 
-@router.post("/api/game_sessions/{session_id}/release_character")
+@router.post("/game_sessions/{session_id}/release_character")
 async def release_character(session_id: UUID, client_id: str, db: Session = Depends(get_db)):
     # Explicitly fetch existing selection for this player only
     selection = db.query(SessionPlayerCharacter).filter_by(
@@ -427,7 +427,7 @@ async def release_character(session_id: UUID, client_id: str, db: Session = Depe
 
 
 # Endpoint to fetch currently selected characters for all clients connected to a specific game session
-@router.get("/api/game_sessions/{session_id}/selected_characters")
+@router.get("/game_sessions/{session_id}/selected_characters")
 async def get_selected_characters(session_id: UUID, db: Session = Depends(get_db)):
     session = db.query(GameSession).filter(GameSession.id == session_id).first()
     if not session:
@@ -454,7 +454,7 @@ async def get_selected_characters(session_id: UUID, db: Session = Depends(get_db
 
 
 # Explicitly fetch ALL scenario characters (including selected and locked ones)
-@router.get("/api/game_sessions/{session_id}/all_characters")
+@router.get("/game_sessions/{session_id}/all_characters")
 async def all_characters(session_id: UUID, db: Session = Depends(get_db)):
     session = db.query(GameSession).filter(GameSession.id == session_id).first()
     if not session:
@@ -468,7 +468,7 @@ async def all_characters(session_id: UUID, db: Session = Depends(get_db)):
 
     return {"all_characters": characters}
 
-@router.get('/api/game-state/{session_id}')
+@router.get('/game-state/{session_id}')
 async def get_full_game_state(session_id: UUID, db: Session = Depends(get_db)):
     """
     Retrieve and explicitly return the full game state for a given session ID.
@@ -511,7 +511,7 @@ async def get_full_game_state(session_id: UUID, db: Session = Depends(get_db)):
         )
 
 # API endpoint to retrieve a detailed visual representation of the labyrinth map for frontend visualization
-@router.get('/api/game-state/{session_id}/visual-map')
+@router.get('/game-state/{session_id}/visual-map')
 async def get_visual_map(session_id: UUID, db: Session = Depends(get_db)):
     # Explicitly convert UUID to string for consistent database querying
     session_id_str = str(session_id)
