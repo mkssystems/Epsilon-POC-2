@@ -13,6 +13,7 @@ from uuid import UUID
 import json
 import threading
 import pandas as pd
+import asyncio
 
 from models.base import Base
 from models.game_session import GameSession
