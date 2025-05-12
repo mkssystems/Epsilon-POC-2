@@ -24,7 +24,7 @@ async def player_ready(session_id: str, payload: dict, db: Session = Depends(get
     if not session:
         raise HTTPException(status_code=404, detail="Game session explicitly not found.")
 
-    # Explicitly find and update the client
+    # Explicitly find and update the client readiness
     client = db.query(MobileClient).filter(
         MobileClient.client_id == client_id,
         MobileClient.game_session_id == session_id
@@ -36,14 +36,27 @@ async def player_ready(session_id: str, payload: dict, db: Session = Depends(get
     client.is_ready = True
     db.commit()
 
-    # Explicitly check if all clients are ready
+    # Explicitly fetch all connected clients readiness status
     all_clients = db.query(MobileClient).filter(MobileClient.game_session_id == session_id).all()
 
-    if all(client.is_ready for client in all_clients):
-        # Load current game state explicitly
+    players_status = [
+        {"client_id": c.client_id, "ready": c.is_ready}
+        for c in all_clients
+    ]
+
+    all_ready = all(c.is_ready for c in all_clients)
+
+    # Explicitly broadcast updated readiness status immediately
+    await broadcast_session_update(session_id, {
+        "type": "readiness_status",
+        "players": players_status,
+        "all_ready": all_ready
+    })
+
+    # Proceed with phase transition explicitly if all ready
+    if all_ready:
         game_state = load_initial_game_state(db, session_id)
 
-        # Update explicitly phase from TURN_0 to INITIAL_PLACEMENT if currently in TURN_0
         if game_state.phase.name == GamePhaseName.TURN_0:
             game_state.phase = PhaseInfo(
                 name=GamePhaseName.INITIAL_PLACEMENT,
@@ -51,18 +64,15 @@ async def player_ready(session_id: str, payload: dict, db: Session = Depends(get
                 is_end_turn=False,
                 started_at=datetime.utcnow()
             )
-
-            # Explicitly save updated state to the database
             save_game_state_to_db(db, game_state)
 
-            # Explicitly broadcast updated game state
             await broadcast_session_update(session_id, {
                 "event": "phase_transition",
                 "new_phase": game_state.phase.name.value,
                 "timestamp": game_state.phase.started_at.isoformat()
             })
 
-        # Explicitly broadcast all players ready event
+        # Also explicitly send all_players_ready event
         await broadcast_session_update(session_id, {
             "event": "all_players_ready",
             "session_id": session_id
