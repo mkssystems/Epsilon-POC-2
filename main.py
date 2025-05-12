@@ -230,5 +230,5 @@ app.include_router(api_router)
 app.include_router(player_ready_router)
 
 # Mount static files LAST
-app.mount("/console", StaticFiles(directory="frontend", html=True), name="frontend")
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 app.mount("/tiles", StaticFiles(directory="frontend/tiles"), name="tiles")
