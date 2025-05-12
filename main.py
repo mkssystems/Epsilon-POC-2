@@ -223,8 +223,8 @@ def destroy_all_sessions(db: Session = Depends(get_db)):
 mount_websocket_routes(app)
 
 # Include API router SECOND
-app.include_router(api_router)
-app.include_router(player_ready_router)
+app.include_router(api_router, prefix="/api")
+app.include_router(player_ready_router, prefix="/api")
 
 # Mount static files LAST
 app.mount("/console", StaticFiles(directory="frontend", html=True), name="frontend")
