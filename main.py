@@ -35,6 +35,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Import API routers
 from routes.api import router as api_router
 from routes.player_ready import router as player_ready_router
+from routes.tiles_to_place_on_board import router as tiles_to_place_router
 
 # Import for real-time socket
 from realtime import mount_websocket_routes, broadcast_session_update
@@ -222,9 +223,10 @@ def destroy_all_sessions(db: Session = Depends(get_db)):
 # WebSocket endpoint registration FIRST
 mount_websocket_routes(app)
 
-# Include API router SECOND
+# Include API routers
 app.include_router(api_router, prefix="/api")
 app.include_router(player_ready_router, prefix="/api")
+app.include_router(tiles_to_place_router, prefix="/api")
 
 # Mount static files LAST
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
