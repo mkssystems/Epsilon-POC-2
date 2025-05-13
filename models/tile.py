@@ -29,6 +29,9 @@ class Tile(Base):
     # Indicates whether the tile has been revealed to players
     revealed = Column(Boolean, nullable=False, default=False)
 
+    # NEW FIELD: Indicates explicitly if tile has been physically placed on the board
+    on_board = Column(Boolean, nullable=False, default=False)
+
     # Thematic overlay identifier combining theme (CMYK) and open directions (e.g., "C-NS", "M-EW")
     tile_code = Column(String(10), nullable=False)
 
