@@ -41,22 +41,7 @@ async def connect_to_session(session_id: str, client_id: str, websocket: WebSock
         active_connections[session_id] = []
     active_connections[session_id].append({"client_id": client_id, "websocket": websocket})
 
-    # Explicitly initialize DB session once per connection
-    db = SessionLocal()
-    try:
-        # Fetch readiness explicitly from DB at connection start
-        clients = db.query(MobileClient).filter(MobileClient.game_session_id == session_id).all()
-
-        with lock:
-            session_readiness[session_id] = {client.client_id: client.is_ready for client in clients}
-
-        players = [PlayerStatus(client_id=c.client_id, ready=c.is_ready) for c in clients]
-        all_ready = all(c.is_ready for c in clients)
-
-        session_status = SessionStatus(players=players, all_ready=all_ready)
-        await broadcast_session_update(session_id, session_status.dict())
-    finally:
-        db.close()
+    # No DB calls or sending updates here explicitly
 
 async def disconnect_from_session(session_id: str, websocket: WebSocket):
     if session_id in active_connections:
@@ -91,7 +76,7 @@ def mount_websocket_routes(app):
     async def websocket_endpoint(websocket: WebSocket, session_id: str, client_id: str):
         await connect_to_session(session_id, client_id, websocket)
         last_non_ping_time = time.time()
-
+    
         try:
             while True:
                 try:
@@ -104,7 +89,7 @@ def mount_websocket_routes(app):
                     await websocket.close()
                     await disconnect_from_session(session_id, websocket)
                     break
-
+    
                 try:
                     data_dict = json.loads(message_text)
                     if not isinstance(data_dict, dict):
@@ -112,9 +97,9 @@ def mount_websocket_routes(app):
                 except (json.JSONDecodeError, ValueError):
                     await websocket.send_json({"type": "error", "message": "Invalid JSON format."})
                     continue
-
+    
                 message_type = data_dict.get('type')
-
+    
                 if message_type == 'ping':
                     await websocket.send_json({"type": "pong"})
                     if (time.time() - last_non_ping_time) > WEBSOCKET_PING_ONLY_TIMEOUT:
@@ -122,7 +107,7 @@ def mount_websocket_routes(app):
                         await websocket.close()
                         await disconnect_from_session(session_id, websocket)
                         break
-
+    
                 elif message_type == 'intro_completed':
                     db = SessionLocal()
                     try:
@@ -133,19 +118,18 @@ def mount_websocket_routes(app):
                         if client_entry:
                             client_entry.is_ready = True
                             db.commit()
-
-                            # Update readiness explicitly in memory
+    
                             with lock:
                                 session_readiness[session_id][client_id] = True
-
+    
                             players = [
                                 PlayerStatus(client_id=cid, ready=ready)
                                 for cid, ready in session_readiness[session_id].items()
                             ]
                             all_ready = all(player.ready for player in players)
-
+    
                             await broadcast_session_update(session_id, SessionStatus(players=players, all_ready=all_ready).dict())
-
+    
                             if all_ready:
                                 await broadcast_session_update(session_id, {
                                     "event": "all_players_ready",
@@ -155,24 +139,29 @@ def mount_websocket_routes(app):
                             await websocket.send_json({"type": "error", "message": "Client not found."})
                     finally:
                         db.close()
-
+    
                 elif message_type == 'request_readiness':
-                    with lock:
-                        players = [
-                            PlayerStatus(client_id=cid, ready=ready)
-                            for cid, ready in session_readiness.get(session_id, {}).items()
-                        ]
-                        all_ready = all(player.ready for player in players) if players else False
-                
-                    await websocket.send_json({
-                        "type": "readiness_status",
-                        "players": [p.dict() for p in players],
-                        "all_ready": all_ready
-                    })
-
+                    db = SessionLocal()
+                    try:
+                        clients = db.query(MobileClient).filter(MobileClient.game_session_id == session_id).all()
+    
+                        with lock:
+                            session_readiness[session_id] = {client.client_id: client.is_ready for client in clients}
+    
+                        players = [PlayerStatus(client_id=c.client_id, ready=c.is_ready) for c in clients]
+                        all_ready = all(c.is_ready for c in clients)
+    
+                        await websocket.send_json({
+                            "type": "readiness_status",
+                            "players": [player.dict() for player in players],
+                            "all_ready": all_ready
+                        })
+                    finally:
+                        db.close()
+    
                 else:
                     await websocket.send_json({"type": "error", "message": f"Unknown action '{message_type}'."})
-
+    
         except WebSocketDisconnect:
             await disconnect_from_session(session_id, websocket)
         except Exception as e:
