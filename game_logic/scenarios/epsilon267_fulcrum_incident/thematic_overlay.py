@@ -33,49 +33,51 @@ def build_adjacency_map(tiles):
                 adjacency[tile].append(neighbor)
     return adjacency
 
-# Main function responsible for assigning thematic overlays to tiles.
-# Ensures tiles form cohesive thematic clusters and assigns each a unique identifier.
+# Main function explicitly assigning thematic overlays to tiles in cohesive clusters with unique numbering
 def apply_thematic_overlay(tiles):
     total_tiles = len(tiles)
 
-    # Calculate explicitly how many tiles each thematic area should have
+    # Calculate explicit number of tiles per thematic area
     tiles_per_theme = {
         theme: int(total_tiles * percentage)
         for theme, percentage in THEMATIC_DISTRIBUTION.items()
     }
 
-    # Adjust explicitly for any rounding errors to ensure correct total tile count
+    # Handle rounding explicitly to ensure total tile count matches
     assigned_count = sum(tiles_per_theme.values())
     remaining = total_tiles - assigned_count
 
+    # Distribute explicitly any remaining tiles due to rounding
     for theme in THEMATIC_DISTRIBUTION.keys():
         if remaining == 0:
             break
         tiles_per_theme[theme] += 1
         remaining -= 1
 
-    # Build adjacency map to facilitate BFS-based clustering
+    # Build adjacency map explicitly for clustering
     adjacency_map = build_adjacency_map(tiles)
-    
-    # Shuffle tiles randomly to randomize starting points for thematic clusters
+
+    # Explicitly shuffle tiles to randomize starting points
     random.shuffle(tiles)
+
+    # Set explicitly all tiles as initially unassigned
     unassigned_tiles = set(tiles)
 
-    # Initialize explicit counter for assigning unique numbers to tiles
+    # Explicit numbering counter per labyrinth session
     tile_number_counter = 1
 
-    # Iterate explicitly over each thematic area to create clusters
+    # Assign thematic areas explicitly using BFS for clustering
     for theme_code, count in tiles_per_theme.items():
         queue = deque()
 
-        # Explicitly select a random starting tile from the set of unassigned tiles
+        # Explicitly find a random starting tile from unassigned tiles
         for tile in tiles:
             if tile in unassigned_tiles:
                 queue.append(tile)
                 break
 
+        # Explicitly perform BFS to assign tiles cohesively
         assigned = 0
-        # BFS explicitly ensures cohesive thematic clustering
         while queue and assigned < count:
             current_tile = queue.popleft()
             if current_tile not in unassigned_tiles:
@@ -83,6 +85,7 @@ def apply_thematic_overlay(tiles):
 
             sorted_directions = ''.join(sorted(current_tile.open_directions))
             current_tile.thematic_area = THEMATIC_AREA_NAMES[theme_code]
+            # ⚠️ Explicitly adding unique numbering
             current_tile.tile_code = f"{theme_code}-{sorted_directions}-{tile_number_counter}"
 
             # Increment explicit numbering counter to ensure uniqueness
@@ -91,30 +94,29 @@ def apply_thematic_overlay(tiles):
             unassigned_tiles.remove(current_tile)
             assigned += 1
 
-            # Add neighbors explicitly to queue for thematic expansion
             for neighbor in adjacency_map[current_tile]:
                 if neighbor in unassigned_tiles and neighbor not in queue:
                     queue.append(neighbor)
 
-        # Handle cases explicitly where BFS couldn't assign the required tile count
+        # Handle explicitly if clustering didn't fully assign required tiles
         if assigned < count:
             for tile in unassigned_tiles.copy():
                 if assigned >= count:
                     break
                 sorted_directions = ''.join(sorted(tile.open_directions))
                 tile.thematic_area = THEMATIC_AREA_NAMES[theme_code]
-                tile.tile_code = f"{theme_code}-{sorted_directions}-{tile_number_counter}"
+                current_tile.tile_code = f"{theme_code}-{sorted_directions}-{tile_number_counter}"
                 tile_number_counter += 1
                 assigned += 1
                 unassigned_tiles.remove(tile)
 
-    # Explicit final pass ensuring no tiles remain unassigned, using default theme if necessary
+    # ⚠️ New Final Explicit Pass: Ensure NO tiles are left unassigned
     if unassigned_tiles:
-        default_theme_code = 'M'  # Technical theme as the fallback default
+        default_theme_code = 'M'  # or any default code you'd like to use
         for tile in unassigned_tiles:
             sorted_directions = ''.join(sorted(tile.open_directions))
             tile.thematic_area = THEMATIC_AREA_NAMES[default_theme_code]
-            tile.tile_code = f"{default_theme_code}-{sorted_directions}-{tile_number_counter}"
+            current_tile.tile_code = f"{default_theme_code}-{sorted_directions}-{tile_number_counter}"
             tile_number_counter += 1
 
     return tiles
