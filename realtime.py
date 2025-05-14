@@ -28,6 +28,7 @@ def custom_serializer(o):
 
 async def broadcast_session_update(session_id: str, message: dict):
     serialized_message = json.loads(json.dumps(message, default=custom_serializer))
+    print(f"[BACKEND DEBUG] Broadcasting to session '{session_id}': {serialized_message}")  # Explicit debug
     if session_id in active_connections:
         for connection in active_connections[session_id]:
             try:
