@@ -157,17 +157,15 @@ def mount_websocket_routes(app):
                         db.close()
 
                 elif message_type == 'request_readiness':
-                    node = data_dict.get('node')  # explicitly read node
                     with lock:
                         players = [
                             PlayerStatus(client_id=cid, ready=ready)
                             for cid, ready in session_readiness.get(session_id, {}).items()
                         ]
-                        all_ready = all(player.ready for player in players)
+                        all_ready = all(player.ready for player in players) if players else False
                 
                     await websocket.send_json({
                         "type": "readiness_status",
-                        "node": node,  # Explicitly add node here
                         "players": [p.dict() for p in players],
                         "all_ready": all_ready
                     })
