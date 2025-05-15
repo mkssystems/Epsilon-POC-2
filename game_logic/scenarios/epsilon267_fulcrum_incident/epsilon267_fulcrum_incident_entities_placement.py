@@ -25,6 +25,10 @@ def place_players(db_session, session_id, entity_records):
     tile_records = get_labyrinth_tiles(db_session, session_id)
     starting_tile = random.choice(tile_records)
 
+    # Explicitly reveal the starting tile
+    starting_tile.revealed = True
+    db_session.commit()
+
     player_positions = {entity_record.id: str(starting_tile.id) for entity_record in entity_records}
 
     return player_positions, starting_tile
