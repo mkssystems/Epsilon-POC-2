@@ -31,7 +31,7 @@ def build_adjacency_map(tiles):
                 adjacency[tile].append(neighbor)
     return adjacency
 
-# Main function explicitly assigning thematic overlays to tiles in cohesive clusters with unique numbering
+# Main function explicitly assigning thematic overlays to tiles in cohesive clusters with unique numbering per theme and form
 def apply_thematic_overlay(tiles):
     total_tiles = len(tiles)
 
@@ -53,8 +53,8 @@ def apply_thematic_overlay(tiles):
     random.shuffle(tiles)
     unassigned_tiles = set(tiles)
 
-    # Explicit numbering counter per labyrinth session
-    tile_number_counter = 1
+    # Nested counters to ensure unique numbering per theme and form combination
+    theme_form_counters = defaultdict(lambda: defaultdict(int))
 
     for theme_code, count in tiles_per_theme.items():
         queue = deque()
@@ -71,10 +71,11 @@ def apply_thematic_overlay(tiles):
                 continue
 
             sorted_directions = ''.join(sorted(current_tile.open_directions))
-            current_tile.thematic_area = THEMATIC_AREA_NAMES[theme_code]
-            current_tile.tile_code = f"{theme_code}-{sorted_directions}-{tile_number_counter}"
+            theme_form_counters[theme_code][sorted_directions] += 1
+            number = theme_form_counters[theme_code][sorted_directions]
 
-            tile_number_counter += 1
+            current_tile.thematic_area = THEMATIC_AREA_NAMES[theme_code]
+            current_tile.tile_code = f"{theme_code}-{sorted_directions}-{number}"
 
             unassigned_tiles.remove(current_tile)
             assigned += 1
@@ -88,9 +89,12 @@ def apply_thematic_overlay(tiles):
                 if assigned >= count:
                     break
                 sorted_directions = ''.join(sorted(tile.open_directions))
+                theme_form_counters[theme_code][sorted_directions] += 1
+                number = theme_form_counters[theme_code][sorted_directions]
+
                 tile.thematic_area = THEMATIC_AREA_NAMES[theme_code]
-                tile.tile_code = f"{theme_code}-{sorted_directions}-{tile_number_counter}"
-                tile_number_counter += 1
+                tile.tile_code = f"{theme_code}-{sorted_directions}-{number}"
+
                 assigned += 1
                 unassigned_tiles.remove(tile)
 
@@ -98,8 +102,10 @@ def apply_thematic_overlay(tiles):
         default_theme_code = 'M'
         for tile in unassigned_tiles:
             sorted_directions = ''.join(sorted(tile.open_directions))
+            theme_form_counters[default_theme_code][sorted_directions] += 1
+            number = theme_form_counters[default_theme_code][sorted_directions]
+
             tile.thematic_area = THEMATIC_AREA_NAMES[default_theme_code]
-            tile.tile_code = f"{default_theme_code}-{sorted_directions}-{tile_number_counter}"
-            tile_number_counter += 1
+            tile.tile_code = f"{default_theme_code}-{sorted_directions}-{number}"
 
     return tiles
