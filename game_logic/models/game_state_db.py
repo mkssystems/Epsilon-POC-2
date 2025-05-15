@@ -1,4 +1,4 @@
-# models/game_state_db.py
+# game_logic/models/game_state_db.py
 from sqlalchemy import Column, String, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from models.base import Base  # Your existing SQLAlchemy Base model
