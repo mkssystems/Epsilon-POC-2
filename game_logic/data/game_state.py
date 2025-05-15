@@ -1,8 +1,13 @@
 # game_logic/data/game_state.py
 from dataclasses import dataclass, asdict, field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from enum import Enum
 from datetime import datetime
+from models.game_state_db import GameStateDB
+from sqlalchemy.orm import Session
+from uuid import UUID
+import json
+
 
 # Enumeration explicitly defining all possible phases in the game
 class GamePhaseName(Enum):
@@ -24,6 +29,7 @@ class GamePhaseName(Enum):
     ST_INCREMENT_TURN_COUNTER = "ST_INCREMENT_TURN_COUNTER"
     END_TURN = "END_TURN"
 
+
 # Dataclass explicitly representing main game meta-information
 @dataclass
 class GameInfo:
@@ -33,11 +39,13 @@ class GameInfo:
     size: int                     # Labyrinth size explicitly
     seed: str                     # Seed used for labyrinth generation
 
+
 # Dataclass explicitly representing current turn information
 @dataclass
 class TurnInfo:
     number: int                   # Current turn number explicitly
     started_at: datetime          # Timestamp explicitly indicating turn start
+
 
 # Dataclass explicitly representing current phase information
 @dataclass
@@ -47,11 +55,13 @@ class PhaseInfo:
     is_end_turn: bool             # Explicit indicator if it's an end turn
     started_at: datetime          # Timestamp explicitly indicating phase start
 
+
 # Dataclass explicitly representing individual entities placed on a tile
 @dataclass
 class TileEntity:
     id: str                       # Entity ID explicitly
     type: str                     # Entity type (player, enemy, npc)
+
 
 # Dataclass explicitly representing each tile of the labyrinth
 @dataclass
@@ -65,11 +75,13 @@ class Tile:
     entities: List[TileEntity] = field(default_factory=list)  # Entities explicitly placed
     map_object: Optional[Dict[str, str]] = None              # Map object explicitly placed
 
+
 # Dataclass explicitly representing detailed entity parameters
 @dataclass
 class EntityDetail:
     type: str                             # Type explicitly (player, npc, enemy)
     controlled_by_user_id: Optional[str]  # Controlling user explicitly (None if AI)
+
 
 # Dataclass explicitly representing the complete game state snapshot
 @dataclass
@@ -83,3 +95,39 @@ class GameState:
     # Explicit serialization method to convert GameState to JSON-compatible dict
     def to_json(self):
         return asdict(self)
+
+
+def deserialize_game_state(game_state_json: Dict[str, Any]) -> GameState:
+    return GameState(
+        game_info=GameInfo(**game_state_json["game_info"]),
+        turn=TurnInfo(
+            number=game_state_json["turn"]["number"],
+            started_at=datetime.fromisoformat(game_state_json["turn"]["started_at"])
+        ),
+        phase=PhaseInfo(
+            name=GamePhaseName(game_state_json["phase"]["name"]),
+            number=game_state_json["phase"].get("number"),
+            is_end_turn=game_state_json["phase"]["is_end_turn"],
+            started_at=datetime.fromisoformat(game_state_json["phase"]["started_at"])
+        ),
+        labyrinth={tid: Tile(
+            x=td["x"], y=td["y"], type=td["type"], revealed=td["revealed"],
+            open_directions=td["open_directions"], effect_keyword=td.get("effect_keyword"),
+            entities=[TileEntity(**e) for e in td.get("entities", [])],
+            map_object=td.get("map_object")
+        ) for tid, td in game_state_json["labyrinth"].items()},
+        entities={eid: EntityDetail(**ed) for eid, ed in game_state_json["entities"].items()}
+    )
+
+
+def load_game_state_from_db(db_session: Session, session_id: UUID) -> GameState:
+    session_id_str = str(session_id)
+
+    game_state_entry = db_session.query(GameStateDB).filter(
+        GameStateDB.session_id == session_id_str
+    ).first()
+
+    if not game_state_entry:
+        raise ValueError(f"Game state for session '{session_id_str}' not found explicitly.")
+
+    return deserialize_game_state(game_state_entry.game_state)
