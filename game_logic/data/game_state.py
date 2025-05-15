@@ -3,7 +3,7 @@ from dataclasses import dataclass, asdict, field
 from typing import List, Optional, Dict, Any
 from enum import Enum
 from datetime import datetime
-from models.game_state_db import GameStateDB
+from game_logic.models.game_state_db import GameStateDB
 from sqlalchemy.orm import Session
 from uuid import UUID
 import json
