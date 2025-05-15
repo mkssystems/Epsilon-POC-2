@@ -9,7 +9,6 @@ from uuid import UUID
 import json
 
 
-# Enumeration explicitly defining all possible phases in the game
 class GamePhaseName(Enum):
     TURN_0 = "TURN_0"
     INITIAL_PLACEMENT = "INITIAL_PLACEMENT"
@@ -30,104 +29,118 @@ class GamePhaseName(Enum):
     END_TURN = "END_TURN"
 
 
-# Dataclass explicitly representing main game meta-information
 @dataclass
 class GameInfo:
-    session_id: str               # Unique game session identifier
-    scenario: str                 # Scenario name explicitly
-    labyrinth_id: str             # Labyrinth identifier explicitly
-    size: int                     # Labyrinth size explicitly
-    seed: str                     # Seed used for labyrinth generation
+    session_id: str
+    scenario: str
+    labyrinth_id: str
+    size: int
+    seed: str
 
 
-# Dataclass explicitly representing current turn information
 @dataclass
 class TurnInfo:
-    number: int                   # Current turn number explicitly
-    started_at: datetime          # Timestamp explicitly indicating turn start
+    number: int
+    started_at: datetime
 
 
-# Dataclass explicitly representing current phase information
 @dataclass
 class PhaseInfo:
-    name: GamePhaseName           # Current phase name explicitly
-    number: Optional[int]         # Sub-phase number explicitly (None if not applicable)
-    is_end_turn: bool             # Explicit indicator if it's an end turn
-    started_at: datetime          # Timestamp explicitly indicating phase start
+    name: GamePhaseName
+    number: Optional[int]
+    is_end_turn: bool
+    started_at: datetime
 
 
-# Dataclass explicitly representing individual entities placed on a tile
 @dataclass
 class TileEntity:
-    id: str                       # Entity ID explicitly
-    type: str                     # Entity type (player, enemy, npc)
+    id: str
+    type: str
 
 
-# Dataclass explicitly representing each tile of the labyrinth
 @dataclass
 class Tile:
-    x: int                        # X-coordinate explicitly
-    y: int                        # Y-coordinate explicitly
-    type: str                     # Tile type explicitly
-    revealed: bool                # Reveal status explicitly
-    open_directions: List[str]    # Explicitly open directions (e.g., ["N", "S"])
-    effect_keyword: Optional[str] = None  # Effect keyword explicitly defined for tile
-    entities: List[TileEntity] = field(default_factory=list)  # Entities explicitly placed
-    map_object: Optional[Dict[str, str]] = None              # Map object explicitly placed
+    x: int
+    y: int
+    type: str
+    revealed: bool
+    open_directions: List[str]
+    effect_keyword: Optional[str] = None
+    entities: List[TileEntity] = field(default_factory=list)
+    map_object: Optional[Dict[str, str]] = None
 
 
-# Dataclass explicitly representing detailed entity parameters
 @dataclass
 class EntityDetail:
-    type: str                             # Type explicitly (player, npc, enemy)
-    controlled_by_user_id: Optional[str]  # Controlling user explicitly (None if AI)
+    type: str
+    controlled_by_user_id: Optional[str]
 
 
-# Dataclass explicitly representing the complete game state snapshot
 @dataclass
 class GameState:
-    game_info: GameInfo                   # Main game meta-information explicitly
-    turn: TurnInfo                        # Current turn information explicitly
-    phase: PhaseInfo                      # Current phase information explicitly
-    labyrinth: Dict[str, Tile]            # Explicit labyrinth tile data
-    entities: Dict[str, EntityDetail]     # Explicit detailed entities data
+    game_info: GameInfo
+    turn: TurnInfo
+    phase: PhaseInfo
+    labyrinth: Dict[str, Tile]
+    entities: Dict[str, EntityDetail]
 
-    # Explicit serialization method to convert GameState to JSON-compatible dict
     def to_json(self):
         return asdict(self)
 
 
+def _parse_datetime(date_str: str) -> datetime:
+    try:
+        return datetime.fromisoformat(date_str)
+    except Exception as e:
+        raise ValueError(f"Failed to parse datetime explicitly: '{date_str}' - {e}")
+
+
 def deserialize_game_state(game_state_json: Dict[str, Any]) -> GameState:
-    return GameState(
-        game_info=GameInfo(**game_state_json["game_info"]),
-        turn=TurnInfo(
+    try:
+        game_info = GameInfo(**game_state_json["game_info"])
+        turn_info = TurnInfo(
             number=game_state_json["turn"]["number"],
-            started_at=datetime.fromisoformat(game_state_json["turn"]["started_at"])
-        ),
-        phase=PhaseInfo(
+            started_at=_parse_datetime(game_state_json["turn"]["started_at"])
+        )
+        phase_info = PhaseInfo(
             name=GamePhaseName(game_state_json["phase"]["name"]),
             number=game_state_json["phase"].get("number"),
             is_end_turn=game_state_json["phase"]["is_end_turn"],
-            started_at=datetime.fromisoformat(game_state_json["phase"]["started_at"])
-        ),
-        labyrinth={tid: Tile(
-            x=td["x"], y=td["y"], type=td["type"], revealed=td["revealed"],
-            open_directions=td["open_directions"], effect_keyword=td.get("effect_keyword"),
-            entities=[TileEntity(**e) for e in td.get("entities", [])],
-            map_object=td.get("map_object")
-        ) for tid, td in game_state_json["labyrinth"].items()},
-        entities={eid: EntityDetail(**ed) for eid, ed in game_state_json["entities"].items()}
-    )
+            started_at=_parse_datetime(game_state_json["phase"]["started_at"])
+        )
+        labyrinth = {
+            tid: Tile(
+                x=td["x"],
+                y=td["y"],
+                type=td["type"],
+                revealed=td["revealed"],
+                open_directions=td["open_directions"],
+                effect_keyword=td.get("effect_keyword"),
+                entities=[TileEntity(**e) for e in td.get("entities", [])],
+                map_object=td.get("map_object")
+            ) for tid, td in game_state_json["labyrinth"].items()
+        }
+        entities = {
+            eid: EntityDetail(**ed) for eid, ed in game_state_json["entities"].items()
+        }
+    except KeyError as ke:
+        raise ValueError(f"Missing required key explicitly during deserialization: {ke}")
+    except Exception as e:
+        raise ValueError(f"Error explicitly during game state deserialization: {e}")
+
+    return GameState(game_info, turn_info, phase_info, labyrinth, entities)
 
 
 def load_game_state_from_db(db_session: Session, session_id: UUID) -> GameState:
     session_id_str = str(session_id)
-
     game_state_entry = db_session.query(GameStateDB).filter(
         GameStateDB.session_id == session_id_str
     ).first()
 
     if not game_state_entry:
-        raise ValueError(f"Game state for session '{session_id_str}' not found explicitly.")
+        raise ValueError(f"Game state explicitly not found for session '{session_id_str}'.")
 
-    return deserialize_game_state(game_state_entry.game_state)
+    try:
+        return deserialize_game_state(game_state_entry.game_state)
+    except Exception as e:
+        raise ValueError(f"Failed explicitly to load game state from DB: {e}")
