@@ -1,7 +1,7 @@
 # game_logic/phases/turn_zero.py
 from datetime import datetime
 from game_logic.data.game_state import (
-    GamePhaseName, TurnInfo, PhaseInfo, GameState, GameInfo, Tile, TileEntity, EntityDetail
+    GamePhaseName, TurnInfo, PhaseInfo, GameState, GameInfo, Tile, TileEntity, EntityDetail, load_game_state_from_db
 )
 from utils.db_utils import save_game_state_to_db
 from realtime import broadcast_session_update
@@ -13,8 +13,8 @@ from game_logic.scenarios.epsilon267_fulcrum_incident.epsilon267_fulcrum_inciden
 )
 from game_logic.scenarios.epsilon267_fulcrum_incident.map_objects_placement import place_map_objects
 from models.game_entities import Entity as DbEntity
-from models.session_player_character import SessionPlayerCharacter  # Explicitly import model
-from game_logic.scenarios.epsilon267_fulcrum_incident.thematic_overlay import apply_thematic_overlay  # Explicit import for thematic overlay logic
+from models.session_player_character import SessionPlayerCharacter
+from game_logic.scenarios.epsilon267_fulcrum_incident.thematic_overlay import apply_thematic_overlay
 
 
 # Explicitly retrieve scenario details from the database
@@ -61,7 +61,6 @@ def define_initial_labyrinth(db_session, labyrinth_id, entities_positions, map_o
 def define_initial_entity_details(db_session, entities_positions, player_entities_with_clients):
     entities = {}
 
-    # Explicitly build a dictionary mapping entity IDs to client IDs for quick lookup
     client_controlled_entities = {entity.id: client_id for entity, client_id in player_entities_with_clients}
 
     for entity_id in entities_positions:
@@ -71,13 +70,11 @@ def define_initial_entity_details(db_session, entities_positions, player_entitie
             print(f"[ERROR] {error_msg}")
             raise ValueError(error_msg)
 
-        # Explicitly set controlled_by_user_id for player entities; otherwise None
         entities[entity_id] = EntityDetail(
             type=db_entity.type,
             controlled_by_user_id=client_controlled_entities.get(entity_id)
         )
 
-    # Log explicitly the initialized entities and their controllers
     print(f"[INFO] Explicitly initialized entity details with user control associations: "
           f"{[(eid, detail.controlled_by_user_id) for eid, detail in entities.items()]}")
     
@@ -86,7 +83,15 @@ def define_initial_entity_details(db_session, entities_positions, player_entitie
 
 # Main procedural orchestrating function for Turn 0 initialization
 def execute_turn_zero(db_session, session_id):
-    # Explicitly ensure correct parameter passing here
+    current_game_state = load_game_state_from_db(db_session, session_id)
+
+    if current_game_state.phase.name != GamePhaseName.TURN_0:
+        print(f"[WARNING] Attempted to execute Turn Zero logic explicitly outside of Turn_0 phase for session {session_id}")
+        return {
+            "message": "Turn Zero can only be executed during the Turn_0 phase.",
+            "status": "blocked"
+        }
+
     try:
         scenario_name, labyrinth_id, size, seed = retrieve_scenario_details(db_session, session_id)
         print(f"[INFO] Scenario details retrieved successfully: Scenario='{scenario_name}', Labyrinth='{labyrinth_id}', Size={size}, Seed='{seed}'")
