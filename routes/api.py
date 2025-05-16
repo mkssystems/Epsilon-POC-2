@@ -17,6 +17,10 @@ from game_logic.models.game_state_db import GameStateDB
 from db.session import get_db  # Your existing DB session handler explicitly
 from game_logic.game_flow_controller import GameFlowController
 from models.tile import Tile
+from game_logic.data.game_state import GamePhaseName, PhaseInfo, TurnInfo
+from datetime import datetime
+from utils.db_utils import load_initial_game_state, save_game_state_to_db
+from game_logic.game_flow_controller import GameFlowController
 import json  # explicitly import json
 
 
@@ -26,10 +30,33 @@ router = APIRouter()
 
 @router.post("/game_sessions/{session_id}/start_game")
 async def start_game(session_id: str, db: Session = Depends(get_db)):
-    controller = GameFlowController(session_id)
-    controller.start_game()  # Explicitly handles initialization and broadcasting internally
+    # Explicitly load the current game state from DB
+    game_state = load_initial_game_state(db, session_id)
 
-    # Explicitly reset all players readiness after starting the game
+    # Explicitly update phase and turn to TURN_0 if currently WAITING_FOR_PLAYERS
+    if game_state.phase.name == GamePhaseName.WAITING_FOR_PLAYERS:
+        current_time = datetime.utcnow()
+        
+        game_state.phase = PhaseInfo(
+            name=GamePhaseName.TURN_0,
+            number=0,
+            is_end_turn=False,
+            started_at=current_time
+        )
+        
+        game_state.turn = TurnInfo(
+            number=0,
+            started_at=current_time
+        )
+
+        # Explicitly save updated game state to DB
+        save_game_state_to_db(db, game_state)
+
+    # Explicitly invoke GameFlowController after state update
+    controller = GameFlowController(session_id)
+    controller.start_game()
+
+    # Explicitly reset readiness after starting the game
     db.query(MobileClient).filter(
         MobileClient.game_session_id == session_id
     ).update({"is_ready": False})
@@ -47,10 +74,9 @@ async def start_game(session_id: str, db: Session = Depends(get_db)):
     ]
 
     session_status = SessionStatus(players=players, all_ready=False)
-
     await broadcast_session_update(session_id, session_status.dict())
 
-    return {"message": "Game started successfully"}
+    return {"message": "Game explicitly started successfully"}
 
 
 @router.get('/game_sessions')
