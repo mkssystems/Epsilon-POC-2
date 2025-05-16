@@ -42,7 +42,7 @@ class GameInfo:
 @dataclass
 class TurnInfo:
     number: int
-    started_at: datetime
+    started_at: Optional[datetime]
 
 
 @dataclass
@@ -50,7 +50,7 @@ class PhaseInfo:
     name: GamePhaseName
     number: Optional[int]
     is_end_turn: bool
-    started_at: datetime
+    started_at: Optional[datetime]
 
 
 @dataclass
@@ -89,11 +89,14 @@ class GameState:
         return asdict(self)
 
 
-def _parse_datetime(date_str: str) -> datetime:
+def _parse_datetime(date_str: Optional[str]) -> Optional[datetime]:
+    if date_str is None:
+        return None
     try:
         return datetime.fromisoformat(date_str)
     except Exception as e:
         raise ValueError(f"Failed to parse datetime explicitly: '{date_str}' - {e}")
+
 
 
 def deserialize_game_state(game_state_json: Dict[str, Any]) -> GameState:
