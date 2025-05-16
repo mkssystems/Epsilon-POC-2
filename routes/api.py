@@ -152,6 +152,37 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
     db.commit()
     db.refresh(new_session)
 
+    # Explicitly create initial game state
+    initial_game_state = {
+        "game_info": {
+            "session_id": str(new_session.id),
+            "scenario": request.scenario_name,
+            "labyrinth_id": str(labyrinth.id),
+            "size": request.size,
+            "seed": labyrinth.seed
+        },
+        "turn": {
+            "number": -1,
+            "started_at": None
+        },
+        "phase": {
+            "name": "WAITING_FOR_PLAYERS",
+            "number": None,
+            "is_end_turn": False,
+            "started_at": None
+        },
+        "labyrinth": {},
+        "entities": {}
+    }
+
+    # Explicitly insert the initial state into the GameStateDB
+    new_game_state_db = GameStateDB(
+        session_id=str(new_session.id),
+        game_state=initial_game_state
+    )
+    db.add(new_game_state_db)
+    db.commit()
+
     return {
         'message': 'Game session created successfully',
         'session_id': str(new_session.id),
@@ -163,6 +194,7 @@ async def create_game_session(request: GameSessionCreateRequest, db: Session = D
         'difficulty': new_session.difficulty,
         'max_players': new_session.max_players
     }
+
 
 @router.post('/game_sessions/leave')
 async def leave_game_session(request: ClientJoinRequest, db: Session = Depends(get_db)):
