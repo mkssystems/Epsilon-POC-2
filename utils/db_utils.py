@@ -62,17 +62,19 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
         game_info = GameInfo(**game_state_dict['game_info'])
 
         # Explicitly reconstructing TurnInfo with proper datetime parsing
+        turn_started_at = game_state_dict['turn']['started_at']
         turn_info = TurnInfo(
             number=game_state_dict['turn']['number'],
-            started_at=datetime.fromisoformat(game_state_dict['turn']['started_at'])
+            started_at=datetime.fromisoformat(turn_started_at) if turn_started_at else None
         )
 
         # Explicitly reconstructing PhaseInfo with proper Enum and datetime parsing
+        phase_started_at = game_state_dict['phase']['started_at']
         phase_info = PhaseInfo(
             name=GamePhaseName(game_state_dict['phase']['name']),
             number=game_state_dict['phase'].get('number'),
             is_end_turn=game_state_dict['phase']['is_end_turn'],
-            started_at=datetime.fromisoformat(game_state_dict['phase']['started_at'])
+            started_at=datetime.fromisoformat(phase_started_at) if phase_started_at else None
         )
 
         # Explicitly reconstructing Labyrinth Tiles and Entities
