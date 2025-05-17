@@ -90,6 +90,9 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
                     TileEntity(**entity) for entity in tile_data.get('entities', [])
                 ],
                 map_object=tile_data.get('map_object')
+                on_board=tile_data.get('on_board', False),
+                tile_code=tile_data.get('tile_code', ""),
+                thematic_area=tile_data.get('thematic_area', "")
             )
             for tile_id, tile_data in game_state_dict.get('labyrinth', {}).items()
         }
