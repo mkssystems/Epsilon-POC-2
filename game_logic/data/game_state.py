@@ -124,7 +124,7 @@ def deserialize_game_state(game_state_json: Dict[str, Any]) -> GameState:
                 open_directions=td["open_directions"],
                 effect_keyword=td.get("effect_keyword"),
                 entities=[TileEntity(**e) for e in td.get("entities", [])],
-                map_object=td.get("map_object")
+                map_object=td.get("map_object"),
                 on_board=td.get("on_board", False),
                 tile_code=td.get("tile_code", ""),
                 thematic_area=td.get("thematic_area", "")
