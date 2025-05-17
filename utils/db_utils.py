@@ -10,6 +10,8 @@ from enum import Enum
 from utils.game_state_logger import log_game_state  # Explicitly import logging utility
 from game_logic.data.game_state import Tile, TileEntity, EntityDetail
 from models.tile import Tile as TileDB
+import uuid
+
 
 
 
@@ -83,27 +85,33 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
         tiles_from_db = session.query(TileDB).filter_by(labyrinth_id=game_info.labyrinth_id).all()
 
         labyrinth = {
-            tile.id: Tile(
+            str(tile.id): Tile(
                 x=tile.x,
                 y=tile.y,
                 type=tile.type,
                 revealed=tile.revealed,
                 open_directions=tile.open_directions,
                 entities=[
-                    TileEntity(**entity) 
+                    TileEntity(**{
+                        key: str(value) if isinstance(value, Enum) or isinstance(value, datetime) or isinstance(value, uuid.UUID) else value
+                        for key, value in entity.items()
+                    }) 
                     for entity in game_state_dict.get('labyrinth', {}).get(str(tile.id), {}).get('entities', [])
                 ],
-                map_object=game_state_dict.get('labyrinth', {}).get(str(tile.id), {}).get('map_object'),
-                on_board=tile.on_board,  # Explicitly fresh from DB
-                tile_code=tile.tile_code,  # Explicitly fresh from DB
-                thematic_area=tile.thematic_area  # Explicitly fresh from DB
+                map_object={
+                    key: str(value) if isinstance(value, uuid.UUID) else value
+                    for key, value in game_state_dict.get('labyrinth', {}).get(str(tile.id), {}).get('map_object', {}).items()
+                } if game_state_dict.get('labyrinth', {}).get(str(tile.id), {}).get('map_object') else None,
+                on_board=tile.on_board,
+                tile_code=tile.tile_code,
+                thematic_area=tile.thematic_area
             )
             for tile in tiles_from_db
         }
 
         # Explicitly reconstruct detailed Entities
         entities = {
-            entity_id: EntityDetail(
+            str(entity_id): EntityDetail(
                 type=entity_data['type'],
                 controlled_by_user_id=entity_data.get('controlled_by_user_id')
             )
