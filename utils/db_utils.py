@@ -88,7 +88,7 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
                 y=tile.y,
                 type=tile.type,
                 revealed=tile.revealed,
-                open_directions=json.loads(tile.open_directions),
+                open_directions=tile.open_directions,
                 entities=[
                     TileEntity(**entity) 
                     for entity in game_state_dict.get('labyrinth', {}).get(tile.id, {}).get('entities', [])
