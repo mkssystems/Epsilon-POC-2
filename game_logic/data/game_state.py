@@ -69,6 +69,9 @@ class Tile:
     effect_keyword: Optional[str] = None
     entities: List[TileEntity] = field(default_factory=list)
     map_object: Optional[Dict[str, str]] = None
+    on_board: bool = False
+    tile_code: str = ""
+    thematic_area: str = ""
 
 
 @dataclass
@@ -122,6 +125,9 @@ def deserialize_game_state(game_state_json: Dict[str, Any]) -> GameState:
                 effect_keyword=td.get("effect_keyword"),
                 entities=[TileEntity(**e) for e in td.get("entities", [])],
                 map_object=td.get("map_object")
+                on_board=td.get("on_board", False),
+                tile_code=td.get("tile_code", ""),
+                thematic_area=td.get("thematic_area", "")
             ) for tid, td in game_state_json["labyrinth"].items()
         }
         entities = {
