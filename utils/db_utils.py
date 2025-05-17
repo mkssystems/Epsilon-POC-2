@@ -9,6 +9,7 @@ from datetime import datetime
 from enum import Enum
 from utils.game_state_logger import log_game_state  # Explicitly import logging utility
 from game_logic.data.game_state import Tile, TileEntity, EntityDetail
+from game_logic.models.tile import Tile as TileDB  # explicitly importing Tile DB model
 
 
 # Explicit helper function to convert datetime and enum to string
@@ -55,20 +56,20 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
     db_entry = session.query(GameStateDB).filter_by(session_id=session_id).first()
 
     if db_entry:
-        # Explicitly deserialize nested dictionaries into dataclass instances
+        # Deserialize existing game_state for basic info
         game_state_dict = db_entry.game_state
         
-        # Explicitly reconstructing GameInfo
+        # Explicitly reconstruct GameInfo
         game_info = GameInfo(**game_state_dict['game_info'])
 
-        # Explicitly reconstructing TurnInfo with proper datetime parsing
+        # Explicitly reconstruct TurnInfo
         turn_started_at = game_state_dict['turn']['started_at']
         turn_info = TurnInfo(
             number=game_state_dict['turn']['number'],
             started_at=datetime.fromisoformat(turn_started_at) if turn_started_at else None
         )
 
-        # Explicitly reconstructing PhaseInfo with proper Enum and datetime parsing
+        # Explicitly reconstruct PhaseInfo
         phase_started_at = game_state_dict['phase']['started_at']
         phase_info = PhaseInfo(
             name=GamePhaseName(game_state_dict['phase']['name']),
@@ -77,27 +78,29 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
             started_at=datetime.fromisoformat(phase_started_at) if phase_started_at else None
         )
 
-        # Explicitly reconstructing Labyrinth Tiles and Entities
+        # Explicitly fetch fresh Tile data directly from DB
+        tiles_from_db = session.query(TileDB).filter_by(labyrinth_id=game_info.labyrinth_id).all()
+
         labyrinth = {
-            tile_id: Tile(
-                x=tile_data['x'],
-                y=tile_data['y'],
-                type=tile_data['type'],
-                revealed=tile_data['revealed'],
-                open_directions=tile_data['open_directions'],
-                effect_keyword=tile_data.get('effect_keyword'),
+            tile.id: Tile(
+                x=tile.x,
+                y=tile.y,
+                type=tile.type,
+                revealed=tile.revealed,
+                open_directions=json.loads(tile.open_directions),
                 entities=[
-                    TileEntity(**entity) for entity in tile_data.get('entities', [])
+                    TileEntity(**entity) 
+                    for entity in game_state_dict.get('labyrinth', {}).get(tile.id, {}).get('entities', [])
                 ],
-                map_object=tile_data.get('map_object'),
-                on_board=tile_data.get('on_board', False),
-                tile_code=tile_data.get('tile_code', ""),
-                thematic_area=tile_data.get('thematic_area', "")
+                map_object=game_state_dict.get('labyrinth', {}).get(tile.id, {}).get('map_object'),
+                on_board=tile.on_board,  # Explicitly fresh from DB
+                tile_code=tile.tile_code,  # Explicitly fresh from DB
+                thematic_area=tile.thematic_area  # Explicitly fresh from DB
             )
-            for tile_id, tile_data in game_state_dict.get('labyrinth', {}).items()
+            for tile in tiles_from_db
         }
 
-        # Explicitly reconstructing detailed Entities
+        # Explicitly reconstruct detailed Entities
         entities = {
             entity_id: EntityDetail(
                 type=entity_data['type'],
@@ -106,7 +109,7 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
             for entity_id, entity_data in game_state_dict.get('entities', {}).items()
         }
 
-        # Finally, explicitly reconstructing the complete GameState
+        # Explicitly reconstruct final GameState
         game_state = GameState(
             game_info=game_info,
             turn=turn_info,
@@ -114,8 +117,12 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
             labyrinth=labyrinth,
             entities=entities
         )
+
+        # Explicitly save updated state back to DB
+        save_game_state_to_db(session, game_state)
+
     else:
-        # Explicitly initialize a default game state if none exists
+        # Initialize default state if no entry exists
         game_info = GameInfo(
             session_id=session_id,
             scenario="Unknown",
