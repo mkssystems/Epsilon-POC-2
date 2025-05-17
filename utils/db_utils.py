@@ -91,9 +91,9 @@ def load_initial_game_state(session: Session, session_id: str) -> GameState:
                 open_directions=tile.open_directions,
                 entities=[
                     TileEntity(**entity) 
-                    for entity in game_state_dict.get('labyrinth', {}).get(tile.id, {}).get('entities', [])
+                    for entity in game_state_dict.get('labyrinth', {}).get(str(tile.id), {}).get('entities', [])
                 ],
-                map_object=game_state_dict.get('labyrinth', {}).get(tile.id, {}).get('map_object'),
+                map_object=game_state_dict.get('labyrinth', {}).get(str(tile.id), {}).get('map_object'),
                 on_board=tile.on_board,  # Explicitly fresh from DB
                 tile_code=tile.tile_code,  # Explicitly fresh from DB
                 thematic_area=tile.thematic_area  # Explicitly fresh from DB
